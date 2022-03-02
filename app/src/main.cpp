@@ -1,15 +1,15 @@
-//
-// Example that demonstrates offboard control using attitude, velocity control
-// in NED (North-East-Down), and velocity control in body (Forward-Right-Down)
-// coordinates.
-//
-
 #include <chrono>
 #include <cmath>
 #include <future>
 #include <iostream>
 #include <thread>
 
+//FastDDS
+#include "sub_callback.h"
+#include "domain_participant.h"
+#include "subscriber.h"
+
+//MAVSDK
 #include <mavsdk/mavsdk.h>
 #include <mavsdk/plugins/action/action.h>
 #include <mavsdk/plugins/offboard/offboard.h>
@@ -135,7 +135,17 @@ bool offb_ctrl_ned(mavsdk::Offboard& offboard)
 }
 
 int main(int argc, char** argv)
-{
+{   
+    ////fast DDS
+    // Create participant. Arguments-> Domain id, QOS name
+    DefaultParticipant dp(0, "mocap_subscriber");
+
+    // Create publisher with msg type
+    DDSSubscriber mocap_sub(idl_msg::MocapPubSubType(), &sub::mocap_msg, "mocap_srl_quad", dp.participant());
+    // Initalize mocap_publisher
+    mocap_sub.init();
+
+    ///MAVSDK
     if (argc != 2) {
         usage(argv[0]);
         return 1;
