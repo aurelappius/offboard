@@ -1,0 +1,5 @@
+/home/aurel/Documents/BT/Ground Effect experiments/build/CMakeFiles/edit_cache.dir
+/home/aurel/Documents/BT/Ground Effect experiments/build/CMakeFiles/rebuild_cache.dir
+/home/aurel/Documents/BT/Ground Effect experiments/build/app/CMakeFiles/offboard.dir
+/home/aurel/Documents/BT/Ground Effect experiments/build/app/CMakeFiles/edit_cache.dir
+/home/aurel/Documents/BT/Ground Effect experiments/build/app/CMakeFiles/rebuild_cache.dir
