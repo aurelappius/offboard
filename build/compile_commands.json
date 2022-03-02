@@ -1,7 +1,0 @@
-[
-{
-  "directory": "/home/aurel/Documents/BT/Ground Effect experiments/build",
-  "command": "/bin/x86_64-linux-gnu-g++-9 -g -std=gnu++17 -o app/CMakeFiles/offboard.dir/src/main.cpp.o -c \"/home/aurel/Documents/BT/Ground Effect experiments/app/src/main.cpp\"",
-  "file": "/home/aurel/Documents/BT/Ground Effect experiments/app/src/main.cpp"
-}
-]
