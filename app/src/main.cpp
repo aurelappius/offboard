@@ -79,50 +79,13 @@ bool offb_ctrl_ned(mavsdk::Offboard& offboard)
         std::cerr << "Offboard start failed: " << offboard_result << '\n';
         return false;
     }
-
-    std::cout << "Offboard started\n";
-    std::cout << "Turn to face East\n";
-
-    Offboard::VelocityNedYaw turn_east{};
-    turn_east.yaw_deg = 90.0f;
-    offboard.set_velocity_ned(turn_east);
-    sleep_for(seconds(1)); // Let yaw settle.
-
-    {
-        const float step_size = 0.01f;
-        const float one_cycle = 2.0f * (float)M_PI;
-        const unsigned steps = 2 * unsigned(one_cycle / step_size);
-
-        std::cout << "Go North and back South\n";
-
-        for (unsigned i = 0; i < steps; ++i) {
-            float vx = 5.0f * sinf(i * step_size);
-            Offboard::VelocityNedYaw north_and_back_south{};
-            north_and_back_south.north_m_s = vx;
-            north_and_back_south.yaw_deg = 90.0f;
-            offboard.set_velocity_ned(north_and_back_south);
-            sleep_for(milliseconds(10));
-        }
-    }
-
-    std::cout << "Turn to face West\n";
-    Offboard::VelocityNedYaw turn_west{};
-    turn_west.yaw_deg = 270.0f;
-    offboard.set_velocity_ned(turn_west);
-    sleep_for(seconds(2));
-
-    std::cout << "Go up 2 m/s, turn to face South\n";
-    Offboard::VelocityNedYaw up_and_south{};
-    up_and_south.down_m_s = -2.0f;
-    up_and_south.yaw_deg = 180.0f;
-    offboard.set_velocity_ned(up_and_south);
-    sleep_for(seconds(4));
-
-    std::cout << "Go down 1 m/s, turn to face North\n";
-    Offboard::VelocityNedYaw down_and_north{};
-    up_and_south.down_m_s = 1.0f;
-    offboard.set_velocity_ned(down_and_north);
-    sleep_for(seconds(4));
+    
+    float x_ref = 0.0;
+    float y_ref = 1.0;
+    float z_ref = 1.5;
+    while(true){
+        
+    }    
 
     offboard_result = offboard.stop();
     if (offboard_result != Offboard::Result::Success) {
@@ -134,6 +97,15 @@ bool offb_ctrl_ned(mavsdk::Offboard& offboard)
     return true;
 }
 
+//fastDDS test function
+void test(DDSSubscriber<idl_msg::MocapPubSubType,cpp_msg::Mocap> &mocap){
+    for(int i=0; i<10; i++){
+        mocap.listener->wait_for_data();
+        std::cout<<"x= "<<sub::mocap_msg.pose.position.x<<std::endl;
+    }
+}
+
+
 int main(int argc, char** argv)
 {   
     ////fast DDS
@@ -142,14 +114,16 @@ int main(int argc, char** argv)
 
     // Create publisher with msg type
     DDSSubscriber mocap_sub(idl_msg::MocapPubSubType(), &sub::mocap_msg, "mocap_srl_quad", dp.participant());
-    // Initalize mocap_publisher
-    mocap_sub.init();
 
-    ///MAVSDK
-    if (argc != 2) {
-        usage(argv[0]);
-        return 1;
-    }
+
+    // std::cout<<"starting fastDDS test"<<std::endl;
+    // test(mocap_sub);
+
+    // ///MAVSDK
+    // if (argc != 2) {
+    //     usage(argv[0]);
+    //     return 1;
+    // }
 
     Mavsdk mavsdk;
     ConnectionResult connection_result = mavsdk.add_any_connection(argv[1]);
@@ -204,6 +178,7 @@ int main(int argc, char** argv)
     }
 
 
+    
     //  using local NED co-ordinates
     if (!offb_ctrl_ned(offboard)) {
         return 1;
