@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(fastcdr REQUIRED)
 find_package(fastrtps REQUIRED)
 find_package(MAVSDK REQUIRED)
+find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
 
 add_subdirectory(app)

@@ -5,6 +5,7 @@ target_include_directories(offboard PUBLIC include)
 
 
 target_link_libraries(offboard PRIVATE
+Eigen3::Eigen
 comm_lib
 MAVSDK::mavsdk
 yaml-cpp

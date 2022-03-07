@@ -1,3 +1,4 @@
+#include <Eigen/Dense>
 #include <chrono>
 #include <cmath>
 #include <filesystem>
@@ -218,45 +219,50 @@ bool offb_ctrl_attitude(
   std::cout << "Offboard started\n";
 
   // params
-  float hover_thrust = 0;
-  float amp = 0.2;
+  Eigen::Vector3d x_ref(0, 0, 2);
+  Eigen::Vector3d v_ref(0, 0, 0);
+  Eigen::DiagonalMatrix<double, 3> K_pos(1, 1, 1);
+  Eigen::DiagonalMatrix<double, 3> K_vel(1, 1, 1);
 
-  // keep altitidue
-  float z_ref = 2.0;
-  float i_ctrl = 0;
-  float p_ctrl = 0;
-  float T_max = 0.6;
-  float T_min = 0.0;
+  // current state
+  Eigen::Vector3d x(telemetry.position_velocity_ned().position.north_m,
+                    telemetry.position_velocity_ned().position.east_m,
+                    -telemetry.position_velocity_ned().position.down_m);
+  Eigen::Vector3d v(telemetry.position_velocity_ned().velocity.north_m_s,
+                    telemetry.position_velocity_ned().velocity.east_m_s,
+                    -telemetry.position_velocity_ned().velocity.down_m_s);
+
+  Eigen::Vector3d a_sp = -K_pos * (x - x_ref) - K_vel * (v - v_ref);
 
   int T = 30;
   std::chrono::steady_clock::time_point end =
       std::chrono::steady_clock::now() + seconds(T);
 
   while (std::chrono::steady_clock::now() < end) {
-    float z;
-    if (!params::SIM) {
-      z = sub::mocap_msg.pose.position.z;
-      mocap.listener->wait_for_data();
-    } else {
-      z = -telemetry.position_velocity_ned().position.down_m;
-    }
-    std::cout << "z= " << z << std::endl;
-    p_ctrl = z_ref - z;
-    i_ctrl += p_ctrl;
-    float thrust = params::P * p_ctrl + params::I * i_ctrl;
-    // saturation
-    if (thrust > T_max) {
-      thrust = T_max;
-    }
-    if (thrust < T_min) {
-      thrust = T_min;
-    }
-    stay.thrust_value = thrust;
-    hover_thrust = thrust;
-    offboard.set_attitude(stay);
   }
+  //   float z;
+  //   if (!params::SIM) {
+  //     z = sub::mocap_msg.pose.position.z;
+  //     mocap.listener->wait_for_data();
+  //   } else {
+  //     z = -telemetry.position_velocity_ned().position.down_m;
+  //   }
+  //   std::cout << "z= " << z << std::endl;
+  //   p_ctrl = z_ref - z;
+  //   i_ctrl += p_ctrl;
+  //   float thrust = params::P * p_ctrl + params::I * i_ctrl;
+  //   // saturation
+  //   if (thrust > T_max) {
+  //     thrust = T_max;
+  //   }
+  //   if (thrust < T_min) {
+  //     thrust = T_min;
+  //   }
+  //   stay.thrust_value = thrust;
+  //   hover_thrust = thrust;
+  //   offboard.set_attitude(stay);
 
-  std::cout << hover_thrust << std::endl;
+  // std::cout << hover_thrust << std::endl;
 
   // landing
   std::cout << "landing..." << std::endl;
