@@ -1,0 +1,9 @@
+SIM: false #simulation or real world
+P_pos: 0.5
+P_vel: 10
+I_vel: 0.5
+D_vel: 0.015
+sample_time: 10 #milliseconds
+hover: 0.45
+k_h: 0.05
+T: 200
