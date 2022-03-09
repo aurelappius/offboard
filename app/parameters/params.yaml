@@ -1,4 +1,4 @@
-SIM: true #simulation or real world
+SIM: false #simulation or real world
 P_pos: 1
 P_vel: 0.1
 I_vel: 1000
@@ -6,10 +6,10 @@ D_vel: 0.0035
 sample_time: 10 #milliseconds
 hover: 0.4
 k_h: 0.05
-T: 10
+T: 20
 
 #trajectory parameters
 v: 0.0
-h_0: 2.0
-freq: 0.25
-amp: 1.0
+h_0: 2.1
+freq: 0.2
+amp: 100

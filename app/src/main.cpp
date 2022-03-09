@@ -117,7 +117,7 @@ bool offb_pos_ctrl_ned(
   // Send it once before starting offboard, otherwise it will be rejected.
   Offboard::PositionNedYaw msg;
   msg.down_m = -params::h_0;
-  msg.east_m = 0;
+  msg.east_m = 1.5;
   msg.north_m = -2;
   msg.yaw_deg = 0;
   offboard.set_position_ned(msg);
@@ -131,21 +131,21 @@ bool offb_pos_ctrl_ned(
   offboard.set_position_ned(msg);
   // wait until takeoff alitutde is reached
   std::cout << "going to starting position" << std::endl;
-  while (true) {
-    if (!params::SIM) {
-      if (sub::mocap_msg.pose.position.x > -2.1 &&
-          sub::mocap_msg.pose.position.x < -1.9) {
-        break;
-      }
-    } else {
-      if (telemetry.position_velocity_ned().position.north_m > -2.1 &&
-          telemetry.position_velocity_ned().position.north_m < -1.9 &&
-          telemetry.position_velocity_ned().velocity.north_m_s < 0.01) {
-        break;
-      }
-    }
-    sleep_for(milliseconds(250));
-  }
+  // while (true) {
+  //   if (!params::SIM) {
+  //     if (sub::mocap_msg.pose.position.x > -2.1 &&
+  //         sub::mocap_msg.pose.position.x < -1.9) {
+  //       break;
+  //     }
+  //   } else {
+  //     if (telemetry.position_velocity_ned().position.north_m > -2.1 &&
+  //         telemetry.position_velocity_ned().position.north_m < -1.9 &&
+  //         telemetry.position_velocity_ned().velocity.north_m_s < 0.01) {
+  //       break;
+  //     }
+  //   }
+  //   sleep_for(milliseconds(250));
+  // }
   sleep_for(seconds(5));
   std::cout << "starting experiment" << std::endl;
 
@@ -157,14 +157,25 @@ bool offb_pos_ctrl_ned(
     loops = (4 * 1000.0) / (params::v * float(params::T_s));
   }
   for (int t = 0; t < loops; t++) {
+    float z_ref;
+
     float t_real = float(t * params::T_s) / 1000.0;
+    if (t_real < 5) {
+      z_ref = params::h_0;
+    }
+    if (t_real > 5) {
+      z_ref = params::h_0 - 1.0;
+    }
+
     float x_ref = -2 + params::v * t_real;
-    float y_ref = 1.0;
-    float z_ref =
-        params::h_0 - params::amp * std::sin(t_real * 2 * M_PI * params::freq);
+    float y_ref = 1.5;
+    // float z_ref =
+    //     params::h_0 - params::amp * std::sin(t_real * 2 * M_PI *
+    //     params::freq);
     float z;
 
     msg.north_m = x_ref;
+    msg.east_m = y_ref;
     msg.down_m = -z_ref;
     offboard.set_position_ned(msg);
 
@@ -209,11 +220,11 @@ bool offb_pos_ctrl_ned(
             << sub::mocap_msg.pose.position.z << ","
             << sub::mocap_msg.pose.orientation_euler.roll << ","
             << sub::mocap_msg.pose.orientation_euler.pitch << ","
-            << sub::mocap_msg.pose.orientation_euler.yaw << ","
-            << telemetry.actuator_control_target().controls.at(0) << ","
-            << telemetry.actuator_control_target().controls.at(1) << ","
-            << telemetry.actuator_control_target().controls.at(2) << ","
-            << telemetry.actuator_control_target().controls.at(3) << "\n";
+            << sub::mocap_msg.pose.orientation_euler.yaw << "\n";
+      // << telemetry.actuator_control_target().controls.at(0) << ","
+      // << telemetry.actuator_control_target().controls.at(1) << ","
+      // << telemetry.actuator_control_target().controls.at(2) << ","
+      // << telemetry.actuator_control_target().controls.at(3) << "\n";
     } else {
       myLog << t * params::T_s << "," << x_ref << "," << y_ref << "," << z_ref
             << "," << telemetry.position_velocity_ned().position.north_m << ","
@@ -327,11 +338,11 @@ int main(int argc, char **argv) {
   std::cout << "Started logging to log/" << Name << ".csv\n";
 
   // contdown [for testing]
-  // for (int i = 3; i > 0; i--) {
-  //   std::cout << "T minus " << i << std::endl;
-  //   sleep_for(seconds(1));
-  // }
-  // std::cout << "LIFTOFF!" << std::endl;
+  for (int i = 3; i > 0; i--) {
+    std::cout << "T minus " << i << std::endl;
+    sleep_for(seconds(1));
+  }
+  std::cout << "LIFTOFF!" << std::endl;
 
   /// MAVSDK
   if (argc != 2) {
@@ -375,11 +386,11 @@ int main(int argc, char **argv) {
   // wait until takeoff alitutde is reached
   while (true) {
     if (!params::SIM) {
-      if (sub::mocap_msg.pose.position.z > 2.4) {
+      if (sub::mocap_msg.pose.position.z > 1.4) {
         break;
       }
     } else {
-      if (-telemetry.position_velocity_ned().position.down_m > 2.4) {
+      if (-telemetry.position_velocity_ned().position.down_m > 1.4) {
         break;
       }
     }
