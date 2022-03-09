@@ -8,6 +8,7 @@
 #include <queue>
 #include <thread>
 #include <time.h>
+
 // include
 #include "parameter_list.h"
 
@@ -53,6 +54,10 @@ inline void set_parameters(const std::string setpoint_path) {
 
   // Set parameters
   params::SIM = commands_yaml["SIM"].as<bool>();
+  params::v = commands_yaml["v"].as<float>();
+  params::h_0 = commands_yaml["h_0"].as<float>();
+  params::freq = commands_yaml["freq"].as<float>();
+  params::amp = commands_yaml["amp"].as<float>();
   params::P_vel = commands_yaml["P_vel"].as<float>();
   params::I_vel = commands_yaml["I_vel"].as<float>();
   params::D_vel = commands_yaml["D_vel"].as<float>();
@@ -103,42 +108,129 @@ std::shared_ptr<System> get_system(Mavsdk &mavsdk) {
   return fut.get();
 }
 
-//
-// Does Offboard control using NED co-ordinates.
-//
-// returns true if everything went well in Offboard control
-//
-bool offb_ctrl_ned(
-    mavsdk::Offboard &offboard,
-    DDSSubscriber<idl_msg::MocapPubSubType, cpp_msg::Mocap> &mocap) {
-  std::cout << "Starting Offboard velocity control in NED coordinates\n";
+bool offb_pos_ctrl_ned(
+    mavsdk::Offboard &offboard, mavsdk::Telemetry &telemetry,
+    DDSSubscriber<idl_msg::MocapPubSubType, cpp_msg::Mocap> &mocap,
+    std::ofstream &myLog) {
+  std::cout << "Starting Offboard position control in NED coordinates\n";
 
   // Send it once before starting offboard, otherwise it will be rejected.
-  const Offboard::VelocityNedYaw stay{};
-  offboard.set_velocity_ned(stay);
+  Offboard::PositionNedYaw msg;
+  msg.down_m = -2.5;
+  msg.east_m = 0;
+  msg.north_m = -2;
+  msg.yaw_deg = 0;
+  offboard.set_position_ned(msg);
 
   Offboard::Result offboard_result = offboard.start();
   if (offboard_result != Offboard::Result::Success) {
     std::cerr << "Offboard start failed: " << offboard_result << '\n';
     return false;
   }
+  // go to start position
+  offboard.set_position_ned(msg);
+  // wait until takeoff alitutde is reached
+  std::cout << "going to starting position" << std::endl;
+  while (true) {
+    if (!params::SIM) {
+      if (sub::mocap_msg.pose.position.x > -2.1 &&
+          sub::mocap_msg.pose.position.x < -1.9) {
+        break;
+      }
+    } else {
+      if (telemetry.position_velocity_ned().position.north_m > -2.1 &&
+          telemetry.position_velocity_ned().position.north_m < -1.9 &&
+          telemetry.position_velocity_ned().velocity.north_m_s < 0.01) {
+        break;
+      }
+    }
+    sleep_for(milliseconds(250));
+  }
+  sleep_for(seconds(5));
+  std::cout << "starting experiment" << std::endl;
 
-  // float x_ref = 0.0;
-  // float y_ref = 1.0;
-  // float z_ref = 1.5;
-  // Offboard::PositionNedYaw msg;
-  // msg.down_m=0;
-  // msg.east_m=0;
-  // msg.north_m=0;
-  // while(true){
-  //     mocap.listener->wait_for_data();
-  //     msg.east_m = x_ref - sub::mocap_msg.pose.position.x;
-  //     msg.north_m = y_ref - sub::mocap_msg.pose.position.y;
-  //     msg.down_m = -( z_ref - sub::mocap_msg.pose.position.z );
+  // Control loop
+  int loops = (4.0 * 1000.0) / (params::v * float(params::T_s));
 
-  //     offboard.set_position_ned(msg);
+  for (int t = 0; t < loops; t++) {
+    float t_real = float(t * params::T_s) / 1000.0;
+    float x_ref = -2 + params::v * t_real;
+    float y_ref = 1.0;
+    float z_ref =
+        params::h_0 - params::amp * std::sin(t_real * 2 * M_PI * params::freq);
+    float z;
 
-  // }
+    msg.north_m = x_ref;
+    msg.down_m = -z_ref;
+    offboard.set_position_ned(msg);
+
+    /*
+        std::vector<float> data_from_quad =
+            telemetry.actuator_control_target().controls;
+
+        data_from_quad.at(3) = 0.75 * data_from_quad.at(3);
+
+        mavsdk::Offboard::ActuatorControlGroup actuatorCtrlGroup1;
+        actuatorCtrlGroup1.controls = data_from_quad;
+
+        std::vector<float> empty{0, 0, 0, 0, 0, 0, 0, 0};
+        mavsdk::Offboard::ActuatorControlGroup actuatorCtrlGroup2;
+        actuatorCtrlGroup2.controls = empty;
+
+        std::vector<mavsdk::Offboard::ActuatorControlGroup>
+       actuatorCtrlGroup_vec;
+
+        actuatorCtrlGroup_vec.push_back(actuatorCtrlGroup1);
+        actuatorCtrlGroup_vec.push_back(actuatorCtrlGroup2);
+
+        mavsdk::Offboard::ActuatorControl actuatorCtrl;
+
+        actuatorCtrl.groups = actuatorCtrlGroup_vec;
+        // actuatorCtrl.groups = actuatorCtrl.groups.at(0);
+
+        offboard.set_actuator_control(actuatorCtrl);
+    */
+    // cout time, z_ref, z, thrust_cmd
+    // std::cout << "t: " << t * params::T_s << "\t z_ref: " << z_ref
+    //           << "\t z: " << z
+    //           << "\t t: " <<
+    //           telemetry.actuator_control_target().controls.at(3)
+    //           << std::endl;
+
+    // log time, xyz_ref, xyz, rpy, control rpyt
+    if (!params::SIM) {
+      myLog << t * params::T_s << "," << x_ref << "," << y_ref << "," << z_ref
+            << "," << sub::mocap_msg.pose.position.x << ","
+            << sub::mocap_msg.pose.position.y << ","
+            << sub::mocap_msg.pose.position.z << ","
+            << sub::mocap_msg.pose.orientation_euler.roll << ","
+            << sub::mocap_msg.pose.orientation_euler.pitch << ","
+            << sub::mocap_msg.pose.orientation_euler.yaw << ","
+            << telemetry.actuator_control_target().controls.at(0) << ","
+            << telemetry.actuator_control_target().controls.at(1) << ","
+            << telemetry.actuator_control_target().controls.at(2) << ","
+            << telemetry.actuator_control_target().controls.at(3) << "\n";
+    } else {
+      myLog << t * params::T_s << "," << x_ref << "," << y_ref << "," << z_ref
+            << "," << telemetry.position_velocity_ned().position.north_m << ","
+            << telemetry.position_velocity_ned().position.east_m << ","
+            << -telemetry.position_velocity_ned().position.down_m << ","
+            << telemetry.position_velocity_ned().velocity.north_m_s << ","
+            << telemetry.position_velocity_ned().velocity.east_m_s << ","
+            << -telemetry.position_velocity_ned().velocity.down_m_s << ","
+            << telemetry.attitude_euler().roll_deg << ","
+            << telemetry.attitude_euler().pitch_deg << ","
+            << telemetry.attitude_euler().yaw_deg << ","
+            << telemetry.actuator_control_target().controls.at(0) << ","
+            << telemetry.actuator_control_target().controls.at(1) << ","
+            << telemetry.actuator_control_target().controls.at(2) << ","
+            << telemetry.actuator_control_target().controls.at(3) << "\n";
+    }
+    sleep_for(milliseconds(int(params::T_s)));
+  }
+
+  std::cout << "experiment finished" << std::endl;
+  sleep_for(seconds(2));
 
   offboard_result = offboard.stop();
   if (offboard_result != Offboard::Result::Success) {
@@ -158,220 +250,6 @@ void test(DDSSubscriber<idl_msg::MocapPubSubType, cpp_msg::Mocap> &mocap) {
   }
 }
 
-bool offb_ctrl_acc(mavsdk::Offboard &offboard) {
-  std::cout << "Starting Offboard acceleration control\n";
-
-  // Send it once before starting offboard, otherwise it will be rejected.
-  Offboard::AccelerationNed stay{};
-  stay.east_m_s2 = 0;
-  stay.north_m_s2 = 0;
-  stay.down_m_s2 = 0;
-  offboard.set_acceleration_ned(stay);
-
-  Offboard::Result offboard_result = offboard.start();
-  if (offboard_result != Offboard::Result::Success) {
-    std::cerr << "Offboard start failed: " << offboard_result << '\n';
-    return false;
-  }
-  std::cout << "Offboard started\n";
-
-  // takeoff
-  std::cout << "Takeoff\n";
-  Offboard::AccelerationNed takeoff{};
-  takeoff.east_m_s2 = 0;
-  takeoff.north_m_s2 = 0;
-  takeoff.down_m_s2 = 0;
-  offboard.set_acceleration_ned(takeoff);
-  sleep_for(milliseconds(6000));
-
-  // stay
-  std::cout << "Hover\n";
-  offboard.set_acceleration_ned(stay);
-  sleep_for(milliseconds(6000));
-
-  // land
-  std::cout << "land\n";
-  Offboard::AccelerationNed land{};
-  land.east_m_s2 = 0;
-  land.north_m_s2 = 0;
-  land.down_m_s2 = 5;
-  offboard.set_acceleration_ned(land);
-  sleep_for(milliseconds(6000));
-
-  offboard_result = offboard.stop();
-  if (offboard_result != Offboard::Result::Success) {
-    std::cerr << "Offboard stop failed: " << offboard_result << '\n';
-    return false;
-  }
-  std::cout << "Offboard stopped\n";
-
-  return true;
-}
-
-bool offb_ctrl_attitude_RPG(
-    mavsdk::Offboard &offboard, mavsdk::Telemetry &telemetry,
-    DDSSubscriber<idl_msg::MocapPubSubType, cpp_msg::Mocap> &mocap) {
-
-  std::cout << "Starting Offboard attitude control\n";
-
-  // Send it once before starting offboard, otherwise it will be rejected.
-  Offboard::Attitude stay{};
-  stay.roll_deg = 0.0f;
-  stay.pitch_deg = 0.0f;
-  stay.yaw_deg = 0.0f;
-  stay.thrust_value = 0.3f;
-  offboard.set_attitude(stay);
-
-  Offboard::Result offboard_result = offboard.start();
-  if (offboard_result != Offboard::Result::Success) {
-    std::cerr << "Offboard start failed: " << offboard_result << '\n';
-    return false;
-  }
-  std::cout << "Offboard started\n";
-
-  // Dummy loop
-  // std::chrono::steady_clock::time_point end =
-  //     std::chrono::steady_clock::now() + seconds(params::T);
-  // std::cout << "thrust" << std::endl;
-  // while (std::chrono::steady_clock::now() < end) {
-  //   Offboard::Attitude cmd{};
-  //   cmd.roll_deg = 0.0f;
-  //   cmd.pitch_deg = 0.0f;
-  //   cmd.yaw_deg = 0.0f;
-  //   cmd.thrust_value = 0.6f;
-  //   offboard.set_attitude(cmd);
-  //   sleep_for(milliseconds(50));
-  // }
-  // params
-  Eigen::DiagonalMatrix<double, 3> K_pos(1, 1, 1);
-  Eigen::DiagonalMatrix<double, 3> K_vel(1, 1, 1);
-  Eigen::DiagonalMatrix<double, 3> D(0, 0, 0); // rotor drag
-
-  // reference
-  Eigen::Vector3d x_ref(0, 0, 2); // position
-  Eigen::Vector3d v_ref(0, 0, 0); // velocity
-  Eigen::Vector3d a_ref(0, 0, 0); // acceleration
-  Eigen::Vector3d R_ref(0, 0, 0); // orientation
-  double yaw = 0;                 // yaw [radians]
-
-  // yaw enforce helpers
-  Eigen::Vector3d x_c(cos(yaw), sin(yaw), 2);
-  Eigen::Vector3d y_c(-sin(yaw), cos(yaw), 2);
-
-  // unit vectors of world
-  Eigen::Vector3d x_w(1, 0, 0); // position
-  Eigen::Vector3d y_w(0, 1, 0); // position
-  Eigen::Vector3d z_w(0, 0, 1); // position
-
-  // control loop
-  std::chrono::steady_clock::time_point end =
-      std::chrono::steady_clock::now() + seconds(params::T);
-
-  float c_max = 1.5 * 230951;
-  while (std::chrono::steady_clock::now() < end) {
-    // current state (pos/vel)
-    Eigen::Vector3d x(telemetry.position_velocity_ned().position.north_m,
-                      telemetry.position_velocity_ned().position.east_m,
-                      -telemetry.position_velocity_ned().position.down_m);
-    Eigen::Vector3d v(telemetry.position_velocity_ned().velocity.north_m_s,
-                      telemetry.position_velocity_ned().velocity.east_m_s,
-                      -telemetry.position_velocity_ned().velocity.down_m_s);
-
-    // rotation of quadcopter
-    Eigen::Vector3d eul(telemetry.attitude_euler().roll_deg * (M_PI / 180.0),
-                        telemetry.attitude_euler().pitch_deg * (M_PI / 180.0),
-                        telemetry.attitude_euler().yaw_deg * (M_PI / 180.0));
-    Eigen::Quaterniond quat(
-        telemetry.attitude_quaternion().w, telemetry.attitude_quaternion().z,
-        telemetry.attitude_quaternion().y, telemetry.attitude_quaternion().z);
-    Eigen::Matrix3d ROT = quat.toRotationMatrix();
-
-    // Body frame
-    Eigen::Vector3d x_b = ROT.col(0); // position
-    Eigen::Vector3d y_b = ROT.col(1); // position
-    Eigen::Vector3d z_b = ROT.col(2); // position
-
-    // desired acceleration
-    Eigen::Vector3d a_fb = (-1) * K_pos * (x - x_ref) - K_vel * (v - v_ref);
-    // Eigen::Vector3d a_dr = (-1) * (R_ref * D * R_ref.transpose()) * v_ref;
-    Eigen::Vector3d a_dr(0, 0, 0);
-    Eigen::Vector3d a_des = a_fb + a_des - a_dr + g * z_w;
-
-    // desired orientation
-    Eigen::Vector3d z_des = a_des / a_des.norm();
-    Eigen::Vector3d x_des = y_c.cross(z_des) / y_c.cross(z_des).norm();
-    Eigen::Vector3d y_des = z_des.cross(x_des);
-
-    // initialize and fill rotation matrix
-    Eigen::Matrix3d R_des;
-    R_des.col(0) = x_des;
-    R_des.col(1) = y_des;
-    R_des.col(2) = z_des;
-
-    // find euler angles
-    Eigen::Vector3d euler = R_des.eulerAngles(0, 1, 2);
-
-    // thrust command
-    double c1 = a_des.transpose() * z_b;
-    double c2 = (v.transpose() * (x_b + y_b));
-    double c = c1 - params::k_h * c2 * c2;
-    // publish commands
-    Offboard::Attitude cmd{};
-    cmd.roll_deg = euler(0);
-    cmd.pitch_deg = euler(1);
-    cmd.yaw_deg = euler(2);
-    float thr = c / c_max;
-    cmd.thrust_value = thr;
-    // std::cout << "roll: " << euler(0) << " pitch: " << euler(1)
-    //<< " yaw: " << euler(2) << " thrust: " << c << std::endl;
-    std::cout << " thrust: " << thr << std::endl;
-    offboard.set_attitude(cmd);
-  }
-  // std::cout << c_max << std::endl;
-  //    float z;
-  //    if (!params::SIM) {
-  //      z = sub::mocap_msg.pose.position.z;
-  //      mocap.listener->wait_for_data();
-  //    } else {
-  //      z = -telemetry.position_velocity_ned().position.down_m;
-  //    }
-  //    std::cout << "z= " << z << std::endl;
-  //    p_ctrl = z_ref - z;
-  //    i_ctrl += p_ctrl;
-  //    float thrust = params::P * p_ctrl + params::I * i_ctrl;
-  //    // saturation
-  //    if (thrust > T_max) {
-  //      thrust = T_max;
-  //    }
-  //    if (thrust < T_min) {
-  //      thrust = T_min;
-  //    }
-  //    stay.thrust_value = thrust;
-  //    hover_thrust = thrust;
-  //    offboard.set_attitude(stay);
-
-  // std::cout << hover_thrust << std::endl;
-
-  // landing
-  std::cout << "landing..." << std::endl;
-  stay.thrust_value = 0.25;
-  offboard.set_attitude(stay);
-  sleep_for(seconds(5));
-  stay.thrust_value = 0.0;
-  offboard.set_attitude(stay);
-  sleep_for(seconds(5));
-  std::cout << "landed" << std::endl;
-
-  offboard_result = offboard.stop();
-  if (offboard_result != Offboard::Result::Success) {
-    std::cerr << "Offboard stop failed: " << offboard_result << '\n';
-    return false;
-  }
-  std::cout << "Offboard stopped\n";
-
-  return true;
-}
-
 float constrain(float data, float under, float upper) {
   if (data > upper) {
     data = upper;
@@ -381,254 +259,13 @@ float constrain(float data, float under, float upper) {
   }
   return data;
 }
-bool offb_ctrl_attitude_custom(
-    mavsdk::Offboard &offboard, mavsdk::Telemetry &telemetry,
-    DDSSubscriber<idl_msg::MocapPubSubType, cpp_msg::Mocap> &mocap) {
 
-  std::cout << "Starting Offboard attitude control\n";
-
-  // Send it once before starting offboard, otherwise it will be rejected.
-  Offboard::Attitude stay{};
-  stay.roll_deg = 0.0f;
-  stay.pitch_deg = 0.0f;
-  stay.yaw_deg = 0.0f;
-  stay.thrust_value = 0.3f;
-  offboard.set_attitude(stay);
-
-  Offboard::Result offboard_result = offboard.start();
-  if (offboard_result != Offboard::Result::Success) {
-    std::cerr << "Offboard start failed: " << offboard_result << '\n';
-    return false;
-  }
-  std::cout << "Offboard started\n";
-
-  // LOGGING
-  std::ofstream myLog;
-  auto timenow =
-      std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-  std::string Date = ctime(&timenow);
-  std::replace(Date.begin(), Date.end(), ' ', '_');
-  Date.pop_back();
-  myLog.open("log/Flight_" + Date + ".csv");
-  std::cout << "Started logging to flight_" << Date << ".csv\n";
-
-  // //takeoff(ramp up approach)
-  // Offboard::Attitude toff{};
-  // toff.roll_deg = 0.0f;
-  // toff.pitch_deg = 0.0f;
-  // toff.yaw_deg = 0.0f;
-  // toff.thrust_value = 0.5f;
-  // offboard.set_attitude(toff);
-  // sleep_for(seconds(3));
-
-  // control loop
-  // std::chrono::steady_clock::time_point end =
-  //     std::chrono::steady_clock::now() + seconds(params::T);
-  float error = 0, i_error = 0, d_error = 0, last_error = 0;
-
-  float z_last = 0;
-  float z_now = 0;
-  float z = 0;
-  int N = 10;
-  std::queue<float> zn;
-  for (int i = 0; i < N; i++) {
-    zn.push(0.0);
-  }
-  float sum = 0;
-  float vz = 0;
-
-  int loops = (params::T * 1000) / params::T_s;
-  for (int t = 0; t < loops; t++) {
-    // GET INFORMATION
-    if (!params::SIM) {
-      z_last = sum / float(N);
-      sum += z;
-      zn.push(z);
-
-      sum -= zn.front();
-      zn.pop();
-      z_now = sum / float(N);
-
-      // z_last = std::ceil(z *1000.0)/1000.0;
-      z = sub::mocap_msg.pose.position.z;
-
-      vz = (z_now - z_last) * (1000.0 / params::T_s);
-      // z_now = std::ceil(z *1000.0)/1000.0;
-      //  std::cout<<"z_last: "<<z_last<<"\t z_now: "<<z_now<<std::endl;
-    } else {
-      z = (-1.0) * telemetry.position_velocity_ned().position.down_m;
-      vz = (-1.0) * telemetry.position_velocity_ned().velocity.down_m_s;
-    }
-
-    // REFERENCE GENERATOR
-    // z_ref = 1.25 + std::sin((t * params::T_s) / 5000.0);
-    float z_ref = 1.0;
-
-    // if (t * params::T_s < 5000) {
-    //   z_ref = 2.5;
-    // } else {
-    //   z_ref = 2.5 + std::sin((t * params::T_s) / 2000.0);
-    // }
-
-    // POSITION CONTROLLER
-    // float z_err = z_ref - z_now;
-    // float v_ref = constrain(params::P_pos * z_err, -0.1, 0.1);
-    // std::cout << " z: " << z_now << "\t err: " << z_err << "\t v_ref: " <<
-    // v_ref
-    //           << std::endl;
-    float v_ref = 0;
-
-    // VELOCITY CONTROLLER
-    last_error = error;
-    error = constrain(v_ref - vz, -5, 5);
-    i_error = constrain(error + error * (params::T_s / 1000.0), -5, 5);
-    d_error = constrain((error - last_error) * (1000.0 / params::T_s), -5, 5);
-    float thrust =
-        constrain(params::hover + params::P_vel * error +
-                      i_error / params::I_vel + params::D_vel * d_error,
-                  0, 0.6);
-    // saturation
-
-    // std::cout << " v: " << vz << "\t pe: " << error << "\t ie: " << i_error
-    //           << "\t de: " << d_error << "\t t: " << thrust << std::endl;
-    std::cout << thrust << std::endl;
-    // send cmd to quadcopter
-    if (t == 3 * N) {
-      std::cout << "STARTING" << std::endl;
-    }
-    if (t > 3 * N) {
-      stay.thrust_value = thrust;
-      offboard.set_attitude(stay);
-    }
-    if (!params::SIM) {
-      myLog << t * params::T_s << "," << z_ref << "," << z << ","
-            << sub::mocap_msg.pose.position.z << "\n";
-    } else {
-      myLog << t * params::T_s << "," << z_ref << "," << z << "," << 0 << "\n";
-    }
-
-    sleep_for(milliseconds(int(params::T_s)));
-  }
-
-  // landing
-  std::cout << "landing..." << std::endl;
-  stay.thrust_value = 0.25;
-  offboard.set_attitude(stay);
-  sleep_for(seconds(5));
-  stay.thrust_value = 0.0;
-  offboard.set_attitude(stay);
-  sleep_for(seconds(5));
-  std::cout << "landed" << std::endl;
-
-  offboard_result = offboard.stop();
-  if (offboard_result != Offboard::Result::Success) {
-    std::cerr << "Offboard stop failed: " << offboard_result << '\n';
-    return false;
-  }
-  std::cout << "Offboard stopped\n";
-
-  return true;
-}
-
-bool offb_ctrl_attitude_ff(
-    mavsdk::Offboard &offboard, mavsdk::Telemetry &telemetry,
-    DDSSubscriber<idl_msg::MocapPubSubType, cpp_msg::Mocap> &mocap) {
-
-  std::cout << "Starting Offboard attitude control\n";
-
-  // Send it once before starting offboard, otherwise it will be rejected.
-  Offboard::Attitude stay{};
-  stay.roll_deg = 0.0f;
-  stay.pitch_deg = 0.0f;
-  stay.yaw_deg = 0.0f;
-  stay.thrust_value = 0.3f;
-  offboard.set_attitude(stay);
-
-  Offboard::Result offboard_result = offboard.start();
-  if (offboard_result != Offboard::Result::Success) {
-    std::cerr << "Offboard start failed: " << offboard_result << '\n';
-    return false;
-  }
-  std::cout << "Offboard started\n";
-
-  // LOGGING
-  std::ofstream myLog;
-  auto timenow =
-      std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-  std::string Date = ctime(&timenow);
-  std::replace(Date.begin(), Date.end(), ' ', '_');
-  Date.pop_back();
-  myLog.open("log/Flight_" + Date + ".csv");
-  std::cout << "Started logging to flight_" << Date << ".csv\n";
-
-  // //takeoff(ramp up approach)
-  // Offboard::Attitude toff{};
-  // toff.roll_deg = 0.0f;
-  // toff.pitch_deg = 0.0f;
-  // toff.yaw_deg = 0.0f;
-  // toff.thrust_value = 0.5f;
-  // offboard.set_attitude(toff);
-  // sleep_for(seconds(3));
-
-  int loops = (params::T * 1000) / params::T_s;
-  for (int t = 0; t < loops; t++) {
-    float z = sub::mocap_msg.pose.position.z;
-
-    if (t * params::T_s < 10000) {
-      stay.thrust_value = 0.4;
-    }
-    if (t * params::T_s < 12000 && t * params::T_s > 10000) {
-      stay.thrust_value = 0.37;
-    }
-    if (t * params::T_s < 14000 && t * params::T_s > 12000) {
-      stay.thrust_value = 0.43;
-    }
-    if (t * params::T_s < 16000 && t * params::T_s > 14000) {
-      stay.thrust_value = 0.37;
-    }
-    if (t * params::T_s < 18000 && t * params::T_s > 16000) {
-      stay.thrust_value = 0.43;
-    }
-    if (t * params::T_s > 18000) {
-      stay.thrust_value = 0.4;
-      break;
-    }
-
-    offboard.set_attitude(stay);
-    // if (!params::SIM) {
-    //   myLog << t * params::T_s << "," << z_ref << "," << z << ","
-    //         << sub::mocap_msg.pose.position.z << "\n";
-    // } else {
-    myLog << t * params::T_s << "," << z << "," << 0 << "\n";
-    // }
-
-    sleep_for(milliseconds(int(params::T_s)));
-  }
-
-  // landing
-  std::cout << "landing..." << std::endl;
-  stay.thrust_value = 0.25;
-  offboard.set_attitude(stay);
-  sleep_for(seconds(5));
-  stay.thrust_value = 0.0;
-  offboard.set_attitude(stay);
-  sleep_for(seconds(5));
-  std::cout << "landed" << std::endl;
-
-  offboard_result = offboard.stop();
-  if (offboard_result != Offboard::Result::Success) {
-    std::cerr << "Offboard stop failed: " << offboard_result << '\n';
-    return false;
-  }
-  std::cout << "Offboard stopped\n";
-
-  return true;
-}
 int main(int argc, char **argv) {
 
   // load yaml parameters
   set_parameters("app/parameters/params.yaml");
-  // fast DDS
+
+  // FASTDDS
   // Create participant. Arguments-> Domain id, QOS name
   DefaultParticipant dp(0, "mocap_subscriber");
 
@@ -641,14 +278,48 @@ int main(int argc, char **argv) {
       mocap_sub.listener->wait_for_data();
       std::cout << "x= " << sub::mocap_msg.pose.position.x << std::endl;
     }
-    // std::cout<<"starting fastDDS test"<<std::endl;
-    // test(mocap_sub);
+    std::cout << "initialized mocap" << std::endl;
   }
-  for (int i = 3; i > 0; i--) {
-    std::cout << "T minus " << i << std::endl;
-    sleep_for(seconds(1));
+
+  // LOGGING
+
+  std::ofstream myLog;
+
+  std::string Name_0 = "flight";
+  std::string suffix = "_nr_0";
+  std::string Name_h0 = "_h0_";
+  std::string val_h0 = std::to_string(params::h_0);
+  val_h0.erase(val_h0.find_last_not_of('0') + 2, std::string::npos);
+  std::string Name_v = "_v_";
+  std::string val_v = std::to_string(params::v);
+  val_v.erase(val_v.find_last_not_of('0') + 2, std::string::npos);
+  std::string Name_freq = "_freq_";
+  std::string val_freq = std::to_string(params::freq);
+  val_freq.erase(val_freq.find_last_not_of('0') + 2, std::string::npos);
+
+  std::string Name = Name_0 + Name_h0 + val_h0 + Name_v + val_v + Name_freq +
+                     val_freq + suffix;
+
+  // check if file already exists
+  for (int i = 0;; i++) {
+    Name.pop_back();
+    Name = Name + std::to_string(i);
+    std::filesystem::path f{"log/" + Name + ".csv"};
+    if (!(std::filesystem::exists(f))) {
+      break;
+    }
   }
-  std::cout << "LIFTOFF!" << std::endl;
+
+  myLog.open("log/" + Name + ".csv");
+
+  std::cout << "Started logging to log/" << Name << ".csv\n";
+
+  // contdown [for testing]
+  // for (int i = 3; i > 0; i--) {
+  //   std::cout << "T minus " << i << std::endl;
+  //   sleep_for(seconds(1));
+  // }
+  // std::cout << "LIFTOFF!" << std::endl;
 
   /// MAVSDK
   if (argc != 2) {
@@ -688,25 +359,54 @@ int main(int argc, char **argv) {
   std::cout << "Armed\n";
 
   action.takeoff();
-  sleep_for(seconds(5));
 
-  // offb_ctrl_acc(offboard);
-  // offb_ctrl_attitude_custom(offboard, telemetry, mocap_sub);
-  // offb_ctrl_attitude_ff(offboard, telemetry, mocap_sub);
-
-  for (int a = 0; a < 100; a++) {
-    Telemetry::ActuatorControlTarget hoho = telemetry.actuator_control_target();
-    std::cout << "size: " << telemetry.actuator_control_target().controls.size()
-              << std::endl;
-    for (int i = 0; i < hoho.controls.size(); i++) {
-      std::cout << "eintrag " << i << ": " << hoho.controls.at(i) << std::endl;
+  // wait until takeoff alitutde is reached
+  while (true) {
+    if (!params::SIM) {
+      if (sub::mocap_msg.pose.position.z > 2.4) {
+        break;
+      }
+    } else {
+      if (-telemetry.position_velocity_ned().position.down_m > 2.4) {
+        break;
+      }
     }
-    sleep_for(milliseconds(100));
+    sleep_for(milliseconds(250));
   }
 
-  action.land();
-  sleep_for(seconds(5));
+  sleep_for(seconds(3));
 
+  offb_pos_ctrl_ned(offboard, telemetry, mocap_sub, myLog);
+
+  // for (int a = 0; a < 100; a++) {
+  //   Telemetry::ActuatorControlTarget hoho =
+  //   telemetry.actuator_control_target(); std::cout << "size: " <<
+  //   telemetry.actuator_control_target().controls.size()
+  //             << std::endl;
+  //   for (int i = 0; i < hoho.controls.size(); i++) {
+  //     std::cout << "eintrag " << i << ": " << hoho.controls.at(i) <<
+  //     std::endl;
+  //   }
+  //   sleep_for(milliseconds(100));
+  // }
+
+  action.land();
+
+  // wait until landed
+  while (true) {
+    if (!params::SIM) {
+      if (sub::mocap_msg.pose.position.z < 0.1) {
+        break;
+      }
+    } else {
+      if (-telemetry.position_velocity_ned().velocity.down_m_s < 0.01 &&
+          -telemetry.position_velocity_ned().position.down_m < 0.1) {
+        break;
+      }
+    }
+    sleep_for(milliseconds(250));
+  }
+  sleep_for(seconds(5));
   const auto disarm_result = action.disarm();
   if (disarm_result != Action::Result::Success) {
     std::cerr << "Disarming failed: " << disarm_result << '\n';
