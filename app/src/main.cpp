@@ -116,7 +116,7 @@ bool offb_pos_ctrl_ned(
 
   // Send it once before starting offboard, otherwise it will be rejected.
   Offboard::PositionNedYaw msg;
-  msg.down_m = -2.5;
+  msg.down_m = -params::h_0;
   msg.east_m = 0;
   msg.north_m = -2;
   msg.yaw_deg = 0;
@@ -150,8 +150,12 @@ bool offb_pos_ctrl_ned(
   std::cout << "starting experiment" << std::endl;
 
   // Control loop
-  int loops = (4.0 * 1000.0) / (params::v * float(params::T_s));
-
+  int loops;
+  if (params::v == 0) {
+    loops = (params::T * 1000.0) / (float(params::T_s));
+  } else {
+    loops = (4 * 1000.0) / (params::v * float(params::T_s));
+  }
   for (int t = 0; t < loops; t++) {
     float t_real = float(t * params::T_s) / 1000.0;
     float x_ref = -2 + params::v * t_real;
@@ -296,9 +300,17 @@ int main(int argc, char **argv) {
   std::string Name_freq = "_freq_";
   std::string val_freq = std::to_string(params::freq);
   val_freq.erase(val_freq.find_last_not_of('0') + 2, std::string::npos);
-
+  std::string Name_amp = "_amp_";
+  std::string val_amp = std::to_string(params::amp);
+  val_amp.erase(val_amp.find_last_not_of('0') + 2, std::string::npos);
+  std::string Name_sim;
+  if (params::SIM == true) {
+    Name_sim = "_SIM";
+  } else {
+    Name_sim = "_REAL";
+  }
   std::string Name = Name_0 + Name_h0 + val_h0 + Name_v + val_v + Name_freq +
-                     val_freq + suffix;
+                     val_freq + Name_amp + val_amp + Name_sim + suffix;
 
   // check if file already exists
   for (int i = 0;; i++) {

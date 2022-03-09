@@ -6,10 +6,10 @@ D_vel: 0.0035
 sample_time: 10 #milliseconds
 hover: 0.4
 k_h: 0.05
-T: 30
+T: 10
 
 #trajectory parameters
-v: 0.6
+v: 0.0
 h_0: 2.0
-freq: 0.125
-amp: 0.75
+freq: 0.25
+amp: 1.0
