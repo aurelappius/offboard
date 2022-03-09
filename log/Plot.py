@@ -49,10 +49,10 @@ for i in range(1, len(sys.argv)):
                        "c_r", "c_p", "c_y", "c_t"], names=header_list).to_numpy()
 
     # t-z plot
-    z_plt.scatter(p_ref[:, 0], p_ref[:, 2], marker="o", s=1, c=ref_color)
-    z_plt.scatter(p[:, 0], p[:, 2], marker="o", s=1, c=curve_color)
+    z_plt.scatter(time, p_ref[:, 2], marker="o", s=1, c=ref_color)
+    z_plt.scatter(time, p[:, 2], marker="o", s=1, c=curve_color)
     # t-thrust plot
-    thrust_plt.scatter(time, ctrl[:, 3], marker="o", s=1, c=curve_color)
+    thrust_plt.scatter(time, rpy[:, 1], marker="o", s=1, c=curve_color)
 
 
 z_plt.set_xlabel("time [s]")
