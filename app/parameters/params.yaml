@@ -1,8 +1,16 @@
 SIM: false #simulation or real world
-P_pos: 0.95
-P_vel: 0.1
-I_vel: 1000
-D_vel: 0.0035
+
+P_pos_XY: 0.95
+P_pos_Z: 0.95
+
+P_vel_XY: 1.4
+I_vel_XY: 0.4
+D_vel_XY: 0.2
+
+P_vel_Z: 4.0
+I_vel_Z: 2.0
+D_vel_Z: 0.0
+
 T_s: 20 #milliseconds
 
 

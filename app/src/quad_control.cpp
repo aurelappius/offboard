@@ -5,6 +5,7 @@
 #include <fstream>
 #include <future>
 #include <iostream>
+#include <math.h>
 #include <queue>
 #include <thread>
 #include <time.h>
@@ -32,6 +33,21 @@ using std::this_thread::sleep_for;
 // constants
 const double g = 9.81;
 
+// linear algebra helpers:
+
+std::vector<float> cross_product(std::vector<float> a, std::vector<float> b) {
+  std::vector<float> result;
+  result.at(0) = a.at(1) * b.at(2) - a.at(2) * b.at(1);
+  result.at(1) = a.at(2) * b.at(0) - a.at(0) * b.at(2);
+  result.at(2) = a.at(0) * b.at(1) - a.at(1) * b.at(0);
+  return result;
+}
+
+float norm(std::vector<float> a) {
+  return std::pow(a.at(0) * a.at(0) + a.at(1) * a.at(1) + a.at(2) * a.at(2),
+                  0.5);
+}
+
 // Checks whether given yaml file exists
 inline void yaml_file_check(std::string yaml_file) {
 
@@ -57,10 +73,14 @@ inline void set_parameters(const std::string setpoint_path) {
   params::h_0 = commands_yaml["h_0"].as<float>();
   params::freq = commands_yaml["freq"].as<float>();
   params::amp = commands_yaml["amp"].as<float>();
-  params::P_vel = commands_yaml["P_vel"].as<float>();
-  params::I_vel = commands_yaml["I_vel"].as<float>();
-  params::D_vel = commands_yaml["D_vel"].as<float>();
-  params::P_pos = commands_yaml["P_pos"].as<float>();
+  params::P_vel_XY = commands_yaml["P_vel_XY"].as<float>();
+  params::I_vel_XY = commands_yaml["I_vel_XY"].as<float>();
+  params::D_vel_XY = commands_yaml["D_vel_XY"].as<float>();
+  params::P_pos_XY = commands_yaml["P_pos_XY"].as<float>();
+  params::P_vel_Z = commands_yaml["P_vel_Z"].as<float>();
+  params::I_vel_Z = commands_yaml["I_vel_Z"].as<float>();
+  params::D_vel_Z = commands_yaml["D_vel_Z"].as<float>();
+  params::P_pos_Z = commands_yaml["P_pos_Z"].as<float>();
   params::T_s = commands_yaml["T_s"].as<int>();
   params::k_h = commands_yaml["k_h"].as<double>();
   params::hover = commands_yaml["hover"].as<float>();
@@ -229,55 +249,127 @@ int main(int argc, char **argv) {
 
   const auto takeoff_result = action.takeoff();
   std::cerr << "Takeoff Result: " << takeoff_result << '\n';
-
+  sleep_for(seconds(5));
   // Send it once before starting offboard, otherwise it will be rejected.
-  Offboard::VelocityNedYaw vel_cmd{};
-  offboard.set_velocity_ned(vel_cmd);
+  // velocity command
+  // Offboard::VelocityNedYaw vel_cmd{};
+  // offboard.set_velocity_ned(vel_cmd);
+  // acceleration command
+  Offboard::AccelerationNed acc_cmd{};
+  offboard.set_acceleration_ned(acc_cmd);
 
   Offboard::Result offboard_result = offboard.start();
   std::cerr << "Offboard Result: " << offboard_result << '\n';
 
   // variable definitions
-  std::vector<float> p_ref{0, 0, 0};
-  std::vector<float> p{0, 0, 0};
-  std::vector<float> p_error{0, 0, 0};
-  std::vector<float> v_ref{0, 0, 0};
+  std::vector<float> pos_ref{0, 0, 0};
+  std::vector<float> vel_ref{0, 0, 0};
+  std::vector<float> acc_ref{0, 0, 0};
+  std::vector<float> x_b_ref{0, 0, 0};
+  std::vector<float> y_b_ref{0, 0, 0};
+  std::vector<float> z_b_ref{0, 0, 0};
+  float yaw_ref = 0;
+
+  std::vector<float> pos{0, 0, 0};
+  std::vector<float> vel{0, 0, 0};
+
+  std::vector<float> pos_p_error{0, 0, 0};
+  std::vector<float> vel_p_error{0, 0, 0};
+  std::vector<float> vel_p_error_last{0, 0, 0};
+  std::vector<float> vel_i_error{0, 0, 0};
+  std::vector<float> vel_d_error{0, 0, 0};
+
   float t = 0;
+  const float T_s_sec = float(params::T_s) / 1000.0;
 
   for (int i = 0;; i++) {
     // time
     t = float(i * params::T_s) / 1000.0;
     // trajectory
-    p_ref.at(0) = sin(t / 5);
-    p_ref.at(1) = cos(t / 5);
-    p_ref.at(2) = 2;
+    pos_ref.at(0) = sin(t / 5);
+    pos_ref.at(1) = cos(t / 5);
+    pos_ref.at(2) = 2;
+    yaw_ref = 0;
 
-    // current state
-    p.at(0) = telemetry.position_velocity_ned().position.north_m;
-    p.at(1) = telemetry.position_velocity_ned().position.east_m;
-    p.at(2) = -telemetry.position_velocity_ned().position.down_m;
+    // current position
+    pos.at(0) = telemetry.position_velocity_ned().position.north_m;
+    pos.at(1) = telemetry.position_velocity_ned().position.east_m;
+    pos.at(2) = -telemetry.position_velocity_ned().position.down_m;
+    // current velocity
+    vel.at(0) = telemetry.position_velocity_ned().velocity.north_m_s;
+    vel.at(1) = telemetry.position_velocity_ned().velocity.east_m_s;
+    vel.at(2) = -telemetry.position_velocity_ned().velocity.down_m_s;
 
-    // error
-    p_error.at(0) = p_ref.at(0) - p.at(0);
-    p_error.at(1) = p_ref.at(1) - p.at(1);
-    p_error.at(2) = p_ref.at(2) - p.at(2);
+    /* POSITION CONTROLLER */
+    // proportional position error
+    pos_p_error.at(0) = pos_ref.at(0) - pos.at(0);
+    pos_p_error.at(1) = pos_ref.at(1) - pos.at(1);
+    pos_p_error.at(2) = pos_ref.at(2) - pos.at(2);
 
     // desired velocity
-    v_ref.at(0) = params::P_pos * p_error.at(0);
-    v_ref.at(1) = params::P_pos * p_error.at(1);
-    v_ref.at(2) = params::P_pos * p_error.at(2);
+    vel_ref.at(0) = params::P_pos_XY * pos_p_error.at(0);
+    vel_ref.at(1) = params::P_pos_XY * pos_p_error.at(1);
+    vel_ref.at(2) = params::P_pos_Z * pos_p_error.at(2);
 
-    // send offboard command
-    vel_cmd.north_m_s = v_ref.at(0);
-    vel_cmd.east_m_s = v_ref.at(1);
-    vel_cmd.down_m_s = -v_ref.at(2);
-    offboard.set_velocity_ned(vel_cmd);
+    /* VELOCITY CONTROLLER */
+    // last proportional velocity error
+    vel_p_error_last = vel_p_error;
+    // proportional velocity error
+    vel_p_error.at(0) = vel_ref.at(0) - vel.at(0);
+    vel_p_error.at(1) = vel_ref.at(1) - vel.at(1);
+    vel_p_error.at(2) = vel_ref.at(2) - vel.at(2);
+    // integrative velocity error
+    vel_i_error.at(0) += vel_p_error.at(0) * T_s_sec;
+    vel_i_error.at(1) += vel_p_error.at(1) * T_s_sec;
+    vel_i_error.at(2) += vel_p_error.at(2) * T_s_sec;
+    // derivative velocity error
+    vel_d_error.at(0) = (vel_p_error.at(0) - vel_p_error_last.at(0)) / T_s_sec;
+    vel_d_error.at(1) = (vel_p_error.at(1) - vel_p_error_last.at(1)) / T_s_sec;
+    vel_d_error.at(2) = (vel_p_error.at(2) - vel_p_error_last.at(2)) / T_s_sec;
 
-    // logging (t,p_ref,p)
-    if (t > 10) {
-      myLog << t << "," << p_ref.at(0) << "," << p_ref.at(1) << ","
-            << p_ref.at(2) << "," << p.at(0) << "," << p.at(1) << "," << p.at(2)
-            << "\n";
+    // desired acceleration
+    acc_ref.at(0) = params::P_vel_XY * vel_p_error.at(0) +
+                    params::I_vel_XY * vel_i_error.at(0) +
+                    params::D_vel_XY * vel_d_error.at(0);
+    acc_ref.at(1) = params::P_vel_XY * vel_p_error.at(1) +
+                    params::I_vel_XY * vel_i_error.at(1) +
+                    params::D_vel_XY * vel_d_error.at(1);
+    acc_ref.at(2) = params::P_vel_Z * vel_p_error.at(2) +
+                    params::I_vel_Z * vel_i_error.at(2) +
+                    params::D_vel_Z * vel_d_error.at(2);
+
+    /* CONVERSION TO ANGLES AND THRUST */
+    std::vector<float> y_c{-std::sin(yaw_ref), std::cos(yaw_ref), 0};
+
+    z_b_ref.at(0) = acc_ref.at(0) / norm(acc_ref);
+    z_b_ref.at(1) = acc_ref.at(1) / norm(acc_ref);
+    z_b_ref.at(2) = acc_ref.at(2) / norm(acc_ref);
+
+    x_b_ref = cross_product(y_c, z_b_ref);
+    float x_b_ref_norm = norm(x_b_ref);
+    x_b_ref.at(0) = x_b_ref.at(0) / x_b_ref_norm;
+    x_b_ref.at(0) = x_b_ref.at(0) / x_b_ref_norm;
+    x_b_ref.at(0) = x_b_ref.at(0) / x_b_ref_norm;
+
+    y_b_ref = cross_product(z_b_ref, x_b_ref);
+    /* COMMANDS TO PX4 */
+    // velocity commands
+    //  vel_cmd.north_m_s = v_ref.at(0);
+    //  vel_cmd.east_m_s = v_ref.at(1);
+    //  vel_cmd.down_m_s = -v_ref.at(2);
+    //  offboard.set_velocity_ned(vel_cmd);
+    // acceleration commands
+    acc_cmd.north_m_s2 = acc_ref.at(0);
+    acc_cmd.east_m_s2 = acc_ref.at(1);
+    acc_cmd.down_m_s2 = -acc_ref.at(2);
+    offboard.set_acceleration_ned(acc_cmd);
+
+    /* LOGGING*/
+    // t, p_ref, p
+    if (t > 10) { // wait for transients to fade away
+      myLog << t << "," << pos_ref.at(0) << "," << pos_ref.at(1) << ","
+            << pos_ref.at(2) << "," << pos.at(0) << "," << pos.at(1) << ","
+            << pos.at(2) << "\n";
     }
     sleep_for(milliseconds(params::T_s)); // 50Hz
   }
