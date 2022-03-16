@@ -27,9 +27,9 @@ line = [0]*len(sys.argv)
 header_list = [
     "t",
     "x_ref", "y_ref", "z_ref",
-    "x", "y", "z"
+    "x", "y", "z",
     # "vx", "vy", "vz",
-    # "roll", "pitch", "yaw"
+    "roll", "pitch", "yaw"
     # ,"c_r", "c_p", "c_y", "c_t"
 ]
 
