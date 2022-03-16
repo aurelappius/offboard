@@ -32,9 +32,7 @@ using std::this_thread::sleep_for;
 
 // constants
 const float g = 9.81;                // m_s2
-const float mass = 1.5;              // kg
-const float hover_thrust = mass * g; // N
-
+const float quadcopter_mass = 1.5;   // kg
 const float max_thrust = 4 * 8.9764; // N
 
 // thrust-throttle relation
@@ -46,20 +44,6 @@ float thrust_to_throttle(float thrust) {
     return 0;
   }
   return (0.02394 * thrust + 0.1644);
-}
-
-// linear algebra helpers:
-std::vector<float> cross_product(std::vector<float> a, std::vector<float> b) {
-  std::vector<float> result{0, 0, 0};
-  result.at(0) = a.at(1) * b.at(2) - a.at(2) * b.at(1);
-  result.at(1) = a.at(2) * b.at(0) - a.at(0) * b.at(2);
-  result.at(2) = a.at(0) * b.at(1) - a.at(1) * b.at(0);
-  return result;
-}
-
-float norm(std::vector<float> a) {
-  return std::pow(a.at(0) * a.at(0) + a.at(1) * a.at(1) + a.at(2) * a.at(2),
-                  0.5);
 }
 
 // Checks whether given yaml file exists
@@ -139,24 +123,6 @@ std::shared_ptr<System> get_system(Mavsdk &mavsdk) {
 
   // Get discovered system now.
   return fut.get();
-}
-
-// fastDDS test function
-void test(DDSSubscriber<idl_msg::MocapPubSubType, cpp_msg::Mocap> &mocap) {
-  for (int i = 0; i < 10; i++) {
-    mocap.listener->wait_for_data();
-    std::cout << "x= " << sub::mocap_msg.pose.position.x << std::endl;
-  }
-}
-
-float constrain(float data, float under, float upper) {
-  if (data > upper) {
-    data = upper;
-  }
-  if (data < under) {
-    data = under;
-  }
-  return data;
 }
 
 int main(int argc, char **argv) {
@@ -261,6 +227,7 @@ int main(int argc, char **argv) {
   const auto arm_result = action.arm();
   std::cerr << "Arming Result: " << arm_result << '\n';
 
+  /* TAKEOFF (only needed for positon, velocity and acceleration control) */
   // const auto takeoff_result = action.takeoff();
   // std::cerr << "Takeoff Result: " << takeoff_result << '\n';
   // sleep_for(seconds(10));
@@ -283,154 +250,128 @@ int main(int argc, char **argv) {
   Offboard::Result offboard_result = offboard.start();
   std::cerr << "Offboard Result: " << offboard_result << '\n';
 
-  /* VARIABLE DEFINITIONS */
-  std::vector<float> pos_ref{0, 0, 0};
-  std::vector<float> vel_ref{0, 0, 0};
-  std::vector<float> acc_ref{0, 0, 0};
-  std::vector<float> x_b_ref{0, 0, 0};
-  std::vector<float> y_b_ref{0, 0, 0};
-  std::vector<float> z_b_ref{0, 0, 0};
+  /* INITIALIZE VARIABLES */
+
+  // reference values
+  Eigen::Vector3f pos_ref(0, 0, 0);
+  Eigen::Vector3f vel_ref(0, 0, 0);
+  Eigen::Vector3f acc_ref(0, 0, 0);
+  Eigen::Vector3f x_b_ref(0, 0, 0);
+  Eigen::Vector3f y_b_ref(0, 0, 0);
+  Eigen::Vector3f z_b_ref(0, 0, 0);
+  Eigen::Matrix3f body_frame_ref;
+  Eigen::Vector3f euler_ref(0, 0, 0);
   float yaw_ref = 0;
 
-  std::vector<float> pos{0, 0, 0};
-  std::vector<float> vel{0, 0, 0};
-  // std::vector<float> euler{0, 0, 0}; // roll, pitch, yaw
-  std::vector<float> quat{0, 0, 0, 0}; // w,x,y,z (quaternion)
+  // current states
+  Eigen::Vector3f pos(0, 0, 0);             // position
+  Eigen::Vector3f vel(0, 0, 0);             // velocity
+  Eigen::Quaternion<float> att(0, 0, 0, 0); // attitude quaternion
+  Eigen::Matrix3f body_frame;               // rotation matrix
 
-  std::vector<float> pos_p_error{0, 0, 0};
-  std::vector<float> vel_p_error{0, 0, 0};
-  std::vector<float> vel_p_error_last{0, 0, 0};
-  std::vector<float> vel_i_error{0, 0, 0};
-  std::vector<float> vel_d_error{0, 0, 0};
+  // controller errors
+  Eigen::Vector3f pos_p_error(0, 0, 0);
+  Eigen::Vector3f vel_p_error(0, 0, 0);
+  Eigen::Vector3f vel_p_error_last(0, 0, 0);
+  Eigen::Vector3f vel_i_error(0, 0, 0);
+  Eigen::Vector3f vel_d_error(0, 0, 0);
 
   float t = 0;
   const float T_s_sec = float(params::T_s) / 1000.0;
 
   for (int i = 0;; i++) {
-    // time
+    // indices -> real-time
     t = float(i * params::T_s) / 1000.0;
-    // trajectory
-    pos_ref.at(0) = sin(t / 5);
-    pos_ref.at(1) = cos(t / 5);
-    pos_ref.at(2) = 2;
-    yaw_ref = 0;
+
+    // trajectory generation
+    trajectory_generator(pos_ref, yaw_ref);
 
     /* CURRENT STATE */
     // current position
-    pos.at(0) = telemetry.position_velocity_ned().position.north_m;
-    pos.at(1) = telemetry.position_velocity_ned().position.east_m;
-    pos.at(2) = -telemetry.position_velocity_ned().position.down_m;
+    pos(0) = telemetry.position_velocity_ned().position.north_m;
+    pos(1) = telemetry.position_velocity_ned().position.east_m;
+    pos(2) = -telemetry.position_velocity_ned().position.down_m;
     // current velocity
-    vel.at(0) = telemetry.position_velocity_ned().velocity.north_m_s;
-    vel.at(1) = telemetry.position_velocity_ned().velocity.east_m_s;
-    vel.at(2) = -telemetry.position_velocity_ned().velocity.down_m_s;
-    // current orientation (euler)
-    // euler.at(0) = telemetry.attitude_euler().roll_deg * (M_PI / 180.0);
-    // euler.at(1) = telemetry.attitude_euler().pitch_deg * (M_PI / 180.0);
-    // euler.at(2) = -telemetry.attitude_euler().yaw_deg * (M_PI / 180.0);
+    vel(0) = telemetry.position_velocity_ned().velocity.north_m_s;
+    vel(1) = telemetry.position_velocity_ned().velocity.east_m_s;
+    vel(2) = -telemetry.position_velocity_ned().velocity.down_m_s;
     // current orientation (quaternion)
-    quat.at(0) = telemetry.attitude_quaternion().w;
-    quat.at(1) = telemetry.attitude_quaternion().x;
-    quat.at(2) = telemetry.attitude_quaternion().y;
-    quat.at(3) = telemetry.attitude_quaternion().z;
+    att.w() = telemetry.attitude_quaternion().w;
+    att.x() = telemetry.attitude_quaternion().x;
+    att.y() = telemetry.attitude_quaternion().y;
+    att.z() = telemetry.attitude_quaternion().z;
+    //  body frame (rotation matrix)
+    body_frame = att.toRotationMatrix();
 
     /* POSITION CONTROLLER */
     // proportional position error
-    pos_p_error.at(0) = pos_ref.at(0) - pos.at(0);
-    pos_p_error.at(1) = pos_ref.at(1) - pos.at(1);
-    pos_p_error.at(2) = pos_ref.at(2) - pos.at(2);
-
+    pos_p_error = pos_ref - pos;
     // desired velocity
-    vel_ref.at(0) = params::P_pos_XY * pos_p_error.at(0);
-    vel_ref.at(1) = params::P_pos_XY * pos_p_error.at(1);
-    vel_ref.at(2) = params::P_pos_Z * pos_p_error.at(2);
+    vel_ref(0) = params::P_pos_XY * pos_p_error(0);
+    vel_ref(1) = params::P_pos_XY * pos_p_error(1);
+    vel_ref(2) = params::P_pos_Z * pos_p_error(2); // different gain for Z-error
 
     /* VELOCITY CONTROLLER */
     // last proportional velocity error
     vel_p_error_last = vel_p_error;
     // proportional velocity error
-    vel_p_error.at(0) = vel_ref.at(0) - vel.at(0);
-    vel_p_error.at(1) = vel_ref.at(1) - vel.at(1);
-    vel_p_error.at(2) = vel_ref.at(2) - vel.at(2);
+    vel_p_error = vel_ref - vel;
     // integrative velocity error
-    vel_i_error.at(0) += vel_p_error.at(0) * T_s_sec;
-    vel_i_error.at(1) += vel_p_error.at(1) * T_s_sec;
-    vel_i_error.at(2) += vel_p_error.at(2) * T_s_sec;
+    vel_i_error += vel_p_error * T_s_sec;
     // derivative velocity error
-    vel_d_error.at(0) = (vel_p_error.at(0) - vel_p_error_last.at(0)) / T_s_sec;
-    vel_d_error.at(1) = (vel_p_error.at(1) - vel_p_error_last.at(1)) / T_s_sec;
-    vel_d_error.at(2) = (vel_p_error.at(2) - vel_p_error_last.at(2)) / T_s_sec;
-
+    vel_d_error = (vel_p_error - vel_p_error_last) / T_s_sec;
     // desired acceleration
-    acc_ref.at(0) = params::P_vel_XY * vel_p_error.at(0) +
-                    params::I_vel_XY * vel_i_error.at(0) +
-                    params::D_vel_XY * vel_d_error.at(0);
-    acc_ref.at(1) = params::P_vel_XY * vel_p_error.at(1) +
-                    params::I_vel_XY * vel_i_error.at(1) +
-                    params::D_vel_XY * vel_d_error.at(1);
-    acc_ref.at(2) = params::P_vel_Z * vel_p_error.at(2) +
-                    params::I_vel_Z * vel_i_error.at(2) +
-                    params::D_vel_Z * vel_d_error.at(2);
+    acc_ref(0) = params::P_vel_XY * vel_p_error(0) +
+                 params::I_vel_XY * vel_i_error(0) +
+                 params::D_vel_XY * vel_d_error(0);
+    acc_ref(1) = params::P_vel_XY * vel_p_error(1) +
+                 params::I_vel_XY * vel_i_error(1) +
+                 params::D_vel_XY * vel_d_error(1);
+    acc_ref(2) = params::P_vel_Z * vel_p_error(2) +
+                 params::I_vel_Z * vel_i_error(2) +
+                 params::D_vel_Z * vel_d_error(2); // different gain for Z-error
 
     /* CONVERSION TO ANGLES AND THRUST */
     // add gravitational acceleration
-    acc_ref.at(2) = acc_ref.at(2) - g;
+    acc_ref(2) = acc_ref(2) - g;
 
-    // find body coordinate system
-    Eigen::Quaternion eigen_quat(quat.at(0), quat.at(1), quat.at(2),
-                                 quat.at(3));
+    // y-vector of global coordinte system turned around yaw_ref
+    Eigen::Vector3f y_c(-std::sin(yaw_ref), std::cos(yaw_ref), 0);
 
-    Eigen::Matrix3f body_frame = eigen_quat.toRotationMatrix();
+    // find reference body frame. For more info see:
+    // (https://github.com/uzh-rpg/rpg_quadrotor_control/blob/master/documents/theory_and_math/theory_and_math.pdf)
+    z_b_ref = acc_ref;
+    z_b_ref.normalize();
+    x_b_ref = y_c.cross(z_b_ref);
+    x_b_ref.normalize();
+    y_b_ref = z_b_ref.cross(x_b_ref);
 
-    Eigen::Vector3f x_b = body_frame.col(0);
-    Eigen::Vector3f y_b = body_frame.col(1);
-    Eigen::Vector3f z_b = body_frame.col(2);
+    // put reference body frame vectors into a matrix
+    body_frame_ref.col(0) = x_b_ref;
+    body_frame_ref.col(1) = y_b_ref;
+    body_frame_ref.col(2) = z_b_ref;
 
-    // yaw adjustet global coordinte system
-    std::vector<float> y_c{-std::sin(yaw_ref), std::cos(yaw_ref), 0};
+    // calculate euler angles from rotation matrix
+    euler_ref = body_frame_ref.eulerAngles(0, 1, 2);
 
-    float acc_norm = norm(acc_ref);
-    z_b_ref.at(0) = acc_ref.at(0) / acc_norm;
-    z_b_ref.at(1) = acc_ref.at(1) / acc_norm;
-    z_b_ref.at(2) = acc_ref.at(2) / acc_norm;
-
-    x_b_ref = cross_product(y_c, z_b_ref);
-    float x_b_ref_norm = norm(x_b_ref);
-    x_b_ref.at(0) = x_b_ref.at(0) / x_b_ref_norm;
-    x_b_ref.at(1) = x_b_ref.at(1) / x_b_ref_norm;
-    x_b_ref.at(2) = x_b_ref.at(2) / x_b_ref_norm;
-
-    y_b_ref = cross_product(z_b_ref, x_b_ref);
-
-    // rotation matrix to euler angles (using Eigen)
-    Eigen::Matrix3f rotation_matrix{
-        {x_b_ref.at(0), y_b_ref.at(0), z_b_ref.at(0)},
-        {x_b_ref.at(1), y_b_ref.at(1), z_b_ref.at(1)},
-        {x_b_ref.at(2), y_b_ref.at(2), z_b_ref.at(2)}};
-
-    Eigen::Vector3f euler_ref = rotation_matrix.eulerAngles(0, 1, 2);
-
-    // thrust command
-
-    Eigen::Vector3f eigen_acc(acc_ref.at(0), acc_ref.at(1), acc_ref.at(2));
-    float acc_proj = eigen_acc.dot(z_b);
-    // project acceleration onto z-axis
-    float thrust_ref = (acc_proj)*mass;
+    // project thurst onto body frame z-axis
+    float acc_proj_z_b = acc_ref.dot(body_frame.col(2));
+    float thrust_ref = (acc_proj_z_b)*quadcopter_mass; // F=M*a
     float throttle_ref = thrust_to_throttle(thrust_ref);
-    std::cout << throttle_ref << std::endl;
-    // throttle_ref = constrain(throttle_ref, 0, 0.6);
 
     /* COMMANDS TO PX4 */
-    // velocity commands
-    //  vel_cmd.north_m_s = v_ref.at(0);
-    //  vel_cmd.east_m_s = v_ref.at(1);
-    //  vel_cmd.down_m_s = -v_ref.at(2);
+    // velocity commands (negative sign to account for xyz -> NED coordinate
+    // change)
+    //  vel_cmd.north_m_s = v_ref(0);
+    //  vel_cmd.east_m_s = v_ref(1);
+    //  vel_cmd.down_m_s = -v_ref(2);
     //  offboard.set_velocity_ned(vel_cmd);
 
-    // acceleration commands
-    // acc_cmd.north_m_s2 = acc_ref.at(0);
-    // acc_cmd.east_m_s2 = acc_ref.at(1);
-    // acc_cmd.down_m_s2 = -acc_ref.at(2);
+    // acceleration commands (negative sign to account for xyz -> NED coordinate
+    // change)
+    // acc_cmd.north_m_s2 = acc_ref(0);
+    // acc_cmd.east_m_s2 = acc_ref(1);
+    // acc_cmd.down_m_s2 = -acc_ref(2);
     // offboard.set_acceleration_ned(acc_cmd);
 
     // attitude commands (negative sign to account for xyz -> NED coordinate
@@ -444,9 +385,8 @@ int main(int argc, char **argv) {
     /* LOGGING*/
     // t, p_ref, p
     if (t > 0) { // wait for transients to fade away
-      myLog << t << "," << pos_ref.at(0) << "," << pos_ref.at(1) << ","
-            << pos_ref.at(2) << "," << pos.at(0) << "," << pos.at(1) << ","
-            << pos.at(2) << "\n";
+      myLog << t << "," << pos_ref(0) << "," << pos_ref(1) << "," << pos_ref(2)
+            << "," << pos(0) << "," << pos(1) << "," << pos(2) << "\n";
     }
 
     /* SLEEP */
