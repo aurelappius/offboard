@@ -55,10 +55,14 @@ void trajectory_generator(float t, Eigen::Vector3f &pos,
     pos_ref(2) = 2;
     yaw_ref = 0;
   } else { // fly circles
-    pos_ref(0) = std::sin(t / 5);
-    pos_ref(1) = std::cos(t / 5);
-    pos_ref(2) = 2;
+    pos_ref(0) = pos(0);
+    pos_ref(1) = pos(1);
+    pos_ref(2) = 0;
     yaw_ref = 0;
+    // pos_ref(0) = std::sin(t / 5);
+    // pos_ref(1) = std::cos(t / 5);
+    // pos_ref(2) = 2;
+    // yaw_ref = 0;
   }
 }
 
@@ -109,7 +113,7 @@ int main(int argc, char **argv) {
   /* TAKEOFF (only needed for positon, velocity and acceleration control) */
   // const auto takeoff_result = action.takeoff();
   // std::cerr << "Takeoff Result: " << takeoff_result << '\n';
-  // sleep_for(seconds(10));
+  // sleep_for(seconds(15));
 
   /* SEND OFFBOARD ONCE BEFORE STARTING (otherwise it will be rejected) */
   // velocity command
@@ -182,6 +186,11 @@ int main(int argc, char **argv) {
     att_quat.z() = telemetry.attitude_quaternion().z;
     //  body frame (rotation matrix)
     body_frame = att_quat.toRotationMatrix();
+
+    // debug console outstream
+    std::cout << "x: " << pos(0) << "\ty: " << pos(1) << "\tz: " << pos(2)
+              << "\tvx: " << vel(0) << "\tvy: " << vel(1) << "\tvz: " << vel(2)
+              << std::endl;
 
     /* TRAJECTORY GENERATION */
     trajectory_generator(t, pos, pos_ref, yaw_ref);
@@ -264,8 +273,8 @@ int main(int argc, char **argv) {
     att_cmd.pitch_deg = -euler_ref(1) * (180.0 / M_PI);
     att_cmd.yaw_deg = -euler_ref(2) * (180.0 / M_PI);
 
-    // att_cmd.thrust_value = throttle_ref;
-    att_cmd.thrust_value = CheesemanCompensator(throttle_ref, pos(2));
+    att_cmd.thrust_value = throttle_ref;
+    // att_cmd.thrust_value = CheesemanCompensator(throttle_ref, pos(2));
     offboard.set_attitude(att_cmd);
 
     /* LOGGING*/
