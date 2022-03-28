@@ -46,23 +46,29 @@ float thrust_to_throttle(float thrust) {
   return (0.02394 * thrust + 0.1644);
 }
 
+float circle_x, circle_y;
 // reference generation
 void trajectory_generator(float t, Eigen::Vector3f &pos,
                           Eigen::Vector3f &pos_ref, float &yaw_ref) {
-  if (t < 15) { // takeoff
+  if (t > 0 && t <= 15) { // takeoff
     pos_ref(0) = pos(0);
     pos_ref(1) = pos(1);
-    pos_ref(2) = 2;
-    yaw_ref = 0;
-  } else { // fly circles
+    pos_ref(2) = 2.0;
+    yaw_ref = 0.0;
+    circle_x = pos(0);
+    circle_y = pos(1);
+  }
+  if (t > 15 && t <= 45) { // fly circles
+    pos_ref(0) = std::cos(params::circle_frequency * t * (2.0 * M_PI));
+    pos_ref(1) = std::sin(params::circle_frequency * t * (2.0 * M_PI));
+    pos_ref(2) = 2.0;
+    yaw_ref = 0.0;
+  }
+  if (t > 45) { // land
     pos_ref(0) = pos(0);
     pos_ref(1) = pos(1);
-    pos_ref(2) = 0;
-    yaw_ref = 0;
-    // pos_ref(0) = std::sin(t / 5);
-    // pos_ref(1) = std::cos(t / 5);
-    // pos_ref(2) = 2;
-    // yaw_ref = 0;
+    pos_ref(2) = 0.0;
+    yaw_ref = 0.0;
   }
 }
 
@@ -188,9 +194,10 @@ int main(int argc, char **argv) {
     body_frame = att_quat.toRotationMatrix();
 
     // debug console outstream
-    std::cout << "x: " << pos(0) << "\ty: " << pos(1) << "\tz: " << pos(2)
-              << "\tvx: " << vel(0) << "\tvy: " << vel(1) << "\tvz: " << vel(2)
-              << std::endl;
+    // std::cout << "x: " << pos(0) << "\ty: " << pos(1) << "\tz: " << pos(2)
+    //           << "\tvx: " << vel(0) << "\tvy: " << vel(1) << "\tvz: " <<
+    //           vel(2)
+    //           << std::endl;
 
     /* TRAJECTORY GENERATION */
     trajectory_generator(t, pos, pos_ref, yaw_ref);
@@ -277,11 +284,35 @@ int main(int argc, char **argv) {
 
     /* LOGGING*/
     // t, p_ref, p, rpy
+    // if (t > params::T_log) { // possibility to wait for transients to fade
+    // away
+    //   myLog << t << "," << pos_ref(0) << "," << pos_ref(1) << "," <<
+    //   pos_ref(2)
+    //         << "," << pos(0) << "," << pos(1) << "," << pos(2) << ","
+    //         << att_euler(0) << "," << att_euler(1) << "," << att_euler(2)
+    //         << "\n";
+    // }
+
+    // t, x, y, z, vx, vy, vz, roll, pitch, yaw, vroll, vpitch, vyaw
     if (t > params::T_log) { // possibility to wait for transients to fade away
-      myLog << t << "," << pos_ref(0) << "," << pos_ref(1) << "," << pos_ref(2)
-            << "," << pos(0) << "," << pos(1) << "," << pos(2) << ","
-            << att_euler(0) << "," << att_euler(1) << "," << att_euler(2)
-            << "\n";
+      if (telemetry.actuator_control_target().controls.size() != 0) {
+        myLog << t << "," << telemetry.position_velocity_ned().position.north_m
+              << "," << telemetry.position_velocity_ned().position.east_m << ","
+              << -telemetry.position_velocity_ned().position.down_m << ","
+              << telemetry.position_velocity_ned().velocity.north_m_s << ","
+              << telemetry.position_velocity_ned().velocity.east_m_s << ","
+              << -telemetry.position_velocity_ned().velocity.down_m_s << ","
+              << telemetry.attitude_euler().roll_deg << ","
+              << telemetry.attitude_euler().pitch_deg << ","
+              << telemetry.attitude_euler().yaw_deg << ","
+              << telemetry.attitude_angular_velocity_body().roll_rad_s << ","
+              << telemetry.attitude_angular_velocity_body().pitch_rad_s << ","
+              << telemetry.attitude_angular_velocity_body().yaw_rad_s << ","
+              << telemetry.actuator_control_target().controls.at(0) << ","
+              << telemetry.actuator_control_target().controls.at(1) << ","
+              << telemetry.actuator_control_target().controls.at(2) << ","
+              << telemetry.actuator_control_target().controls.at(3) << "\n";
+      }
     }
 
     /* SLEEP */
