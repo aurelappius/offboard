@@ -2,6 +2,7 @@
 
 // namespace params
 namespace params {
+float circle_frequency;
 float P_vel_XY;
 float I_vel_XY;
 float D_vel_XY;
@@ -35,6 +36,7 @@ inline void set_parameters(const std::string setpoint_path) {
   YAML::Node commands_yaml = YAML::LoadFile(setpoint_path);
 
   // Set parameters
+  params::circle_frequency = commands_yaml["circle_frequency"].as<float>();
   params::P_vel_XY = commands_yaml["P_vel_XY"].as<float>();
   params::I_vel_XY = commands_yaml["I_vel_XY"].as<float>();
   params::D_vel_XY = commands_yaml["D_vel_XY"].as<float>();

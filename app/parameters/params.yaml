@@ -11,3 +11,6 @@ D_vel_Z: 0.0
 
 T_s: 20 # sampling time [milliseconds]
 T_log: 0 # logging start time [seconds]
+
+#reference generation
+circle_frequency: 0.1
