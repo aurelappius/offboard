@@ -249,6 +249,7 @@ int main(int argc, char **argv) {
     // project thurst onto body frame z-axis
     float acc_proj_z_b = acc_ref.dot(body_frame.col(2));
     float thrust_ref = (acc_proj_z_b)*quadcopter_mass; // F=M*a
+    // thrust_ref = CheesemanCompensator(thrust_ref, pos(2)); //GE compensator
     float throttle_ref = thrust_to_throttle(thrust_ref);
 
     /* COMMANDS TO PX4 */
@@ -268,13 +269,10 @@ int main(int argc, char **argv) {
 
     // attitude commands (negative sign to account for xyz -> NED coordinate
     // change)
-
     att_cmd.roll_deg = -euler_ref(0) * (180.0 / M_PI);
     att_cmd.pitch_deg = -euler_ref(1) * (180.0 / M_PI);
     att_cmd.yaw_deg = -euler_ref(2) * (180.0 / M_PI);
-
     att_cmd.thrust_value = throttle_ref;
-    // att_cmd.thrust_value = CheesemanCompensator(throttle_ref, pos(2));
     offboard.set_attitude(att_cmd);
 
     /* LOGGING*/
