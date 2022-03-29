@@ -29,10 +29,11 @@ using std::chrono::seconds;
 using std::this_thread::sleep_for;
 
 /* CONSTANTS */
-const float g = 9.81;                 // gravitational acceleration [m_s2]
-const float quadcopter_mass = 1.5;    // Quadcopter mass [kg]
-const float max_thrust = 4 * 8.9764;  // maximal thrust [N]
-const float quad_rotor_radius = 0.12; // Quadcopter rotor radius [m]
+const float g = 9.81;                  // gravitational acceleration [m_s2]
+const float quadcopter_mass = 1.5;     // Quadcopter mass [kg]
+const float max_thrust = 4 * 8.9764;   // maximal thrust [N]
+const float quad_rotor_radius = 0.12;  // Quadcopter rotor radius [m]
+const float quad_rotor_distance = 0.3; // Quadcopter rotor distance [m]
 
 /* FUNCTION DECLARATIONS */
 // thrust-throttle relation (linear)
@@ -69,7 +70,7 @@ void trajectory_generator(float t, Eigen::Vector3f &pos,
   //   yaw_ref = 0.0;
   // }
   if (t > 55) { // land
-    std::cout<<"landing now"<<std::endl;
+    std::cout << "landing now" << std::endl;
     pos_ref(0) = pos(0);
     pos_ref(1) = pos(1);
     pos_ref(2) = 0.0;
@@ -80,6 +81,30 @@ void trajectory_generator(float t, Eigen::Vector3f &pos,
 // Cheeseman compensator
 float CheesemanCompensator(float throttle_ref, float z) {
   return throttle_ref / (1.0 - std::pow((quad_rotor_radius / (4 * z)), 2));
+}
+
+// Nobahari compensator (R_eq = 2.5*R)
+float NobahariCompensator(float throttle_ref, float z) {
+  return throttle_ref /
+         (1.0 - std::pow((2.5 * quad_rotor_radius / (4 * z)), 2));
+}
+
+// Hayden compensator
+float HaydenCompensator(float throttle_ref, float z) {
+  return throttle_ref * std::pow(0.9926 + 0.03794 * 4 * quad_rotor_radius *
+                                              quad_rotor_radius / (z * z),
+                                 2.0 / 3.0);
+}
+
+// Sanchez compensator
+float SanchezCompensator(float throttle_ref, float z) {
+  float d = quad_rotor_distance;
+  float R = quad_rotor_radius;
+  return throttle_ref /
+         (1 - std::pow(R / (4 * z), 2) -
+          R * R * (z / std::pow(std::pow(d * d + 4 * z * z, 3), 0.5)) -
+          0.5 * R * R *
+              (z / std::pow(std::pow(2 * d * d + 4 * z * z, 3), 0.5)));
 }
 
 int main(int argc, char **argv) {
@@ -280,8 +305,8 @@ int main(int argc, char **argv) {
 
     // project thurst onto body frame z-axis
     float acc_proj_z_b = acc_ref.dot(body_frame.col(2));
-    float thrust_ref = (acc_proj_z_b)*quadcopter_mass; // F=M*a
-    thrust_ref = CheesemanCompensator(thrust_ref, pos(2)); //GE compensator
+    float thrust_ref = (acc_proj_z_b)*quadcopter_mass;     // F=M*a
+    thrust_ref = CheesemanCompensator(thrust_ref, pos(2)); // GE compensator
     float throttle_ref = thrust_to_throttle(thrust_ref);
 
     /* COMMANDS TO PX4 */
@@ -322,8 +347,9 @@ int main(int argc, char **argv) {
     if (t > 20 && t <= 55) { //(t > params::T_log) { // possibility to wait for
                              // transients to fade away
       if (telemetry.actuator_control_target().controls.size() != 0) {
-        myLog << t-10.0 << "," << telemetry.position_velocity_ned().position.north_m
-              << "," << telemetry.position_velocity_ned().position.east_m << ","
+        myLog << t - 10.0 << ","
+              << telemetry.position_velocity_ned().position.north_m << ","
+              << telemetry.position_velocity_ned().position.east_m << ","
               << -telemetry.position_velocity_ned().position.down_m << ","
               << telemetry.position_velocity_ned().velocity.north_m_s << ","
               << telemetry.position_velocity_ned().velocity.east_m_s << ","
