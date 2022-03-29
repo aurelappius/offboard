@@ -49,17 +49,17 @@ float thrust_to_throttle(float thrust) {
 // reference generation
 void trajectory_generator(float t, Eigen::Vector3f &pos,
                           Eigen::Vector3f &pos_ref, float &yaw_ref) {
-  if (t > 0 && t <= 15) { // takeoff
+  if (t > 0 && t <= 20) { // takeoff
     pos_ref(0) = 0;
     pos_ref(1) = 0;
-    pos_ref(2) = 2.1;
+    pos_ref(2) = 1.05;
     yaw_ref = 0.0;
   }
   // step response
-  if (t > 15 && t <= 45) {
+  if (t > 25 && t <= 55) {
     pos_ref(0) = 0;
     pos_ref(1) = 0;
-    pos_ref(2) = 1.1;
+    pos_ref(2) = 0.05;
     yaw_ref = 0.0;
   }
   // if (t > 15 && t <= 45) { // fly circles
@@ -68,7 +68,8 @@ void trajectory_generator(float t, Eigen::Vector3f &pos,
   //   pos_ref(2) = 2.0;
   //   yaw_ref = 0.0;
   // }
-  if (t > 45) { // land
+  if (t > 55) { // land
+    std::cout<<"landing now"<<std::endl;
     pos_ref(0) = pos(0);
     pos_ref(1) = pos(1);
     pos_ref(2) = 0.0;
@@ -280,7 +281,7 @@ int main(int argc, char **argv) {
     // project thurst onto body frame z-axis
     float acc_proj_z_b = acc_ref.dot(body_frame.col(2));
     float thrust_ref = (acc_proj_z_b)*quadcopter_mass; // F=M*a
-    // thrust_ref = CheesemanCompensator(thrust_ref, pos(2)); //GE compensator
+    thrust_ref = CheesemanCompensator(thrust_ref, pos(2)); //GE compensator
     float throttle_ref = thrust_to_throttle(thrust_ref);
 
     /* COMMANDS TO PX4 */
@@ -318,10 +319,10 @@ int main(int argc, char **argv) {
     // }
 
     // t, x, y, z, vx, vy, vz, roll, pitch, yaw, vroll, vpitch, vyaw, ctrls
-    if (t > 15 && t <= 45) { //(t > params::T_log) { // possibility to wait for
+    if (t > 20 && t <= 55) { //(t > params::T_log) { // possibility to wait for
                              // transients to fade away
       if (telemetry.actuator_control_target().controls.size() != 0) {
-        myLog << t << "," << telemetry.position_velocity_ned().position.north_m
+        myLog << t-10.0 << "," << telemetry.position_velocity_ned().position.north_m
               << "," << telemetry.position_velocity_ned().position.east_m << ","
               << -telemetry.position_velocity_ned().position.down_m << ","
               << telemetry.position_velocity_ned().velocity.north_m_s << ","
