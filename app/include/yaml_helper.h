@@ -12,6 +12,9 @@ float D_vel_Z;
 float P_pos_XY;
 float P_pos_Z;
 float T_log;
+float max_vel_Z_DOWN;
+float max_vel_Z_UP;
+float max_vel_XY;
 int T_s;
 } // namespace params
 
@@ -45,6 +48,9 @@ inline void set_parameters(const std::string setpoint_path) {
   params::I_vel_Z = commands_yaml["I_vel_Z"].as<float>();
   params::D_vel_Z = commands_yaml["D_vel_Z"].as<float>();
   params::P_pos_Z = commands_yaml["P_pos_Z"].as<float>();
+  params::max_vel_Z_DOWN = commands_yaml["max_vel_Z_DOWN"].as<float>();
+  params::max_vel_Z_UP = commands_yaml["max_vel_Z_UP"].as<float>();
+  params::max_vel_XY = commands_yaml["max_vel_XY"].as<float>();
   params::T_s = commands_yaml["T_s"].as<int>();
   params::T_log = commands_yaml["T_log"].as<float>();
 }

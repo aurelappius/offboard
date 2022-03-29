@@ -46,24 +46,28 @@ float thrust_to_throttle(float thrust) {
   return (0.02394 * thrust + 0.1644);
 }
 
-float circle_x, circle_y;
 // reference generation
 void trajectory_generator(float t, Eigen::Vector3f &pos,
                           Eigen::Vector3f &pos_ref, float &yaw_ref) {
   if (t > 0 && t <= 15) { // takeoff
-    pos_ref(0) = pos(0);
-    pos_ref(1) = pos(1);
-    pos_ref(2) = 2.0;
-    yaw_ref = 0.0;
-    circle_x = pos(0);
-    circle_y = pos(1);
-  }
-  if (t > 15 && t <= 45) { // fly circles
-    pos_ref(0) = std::cos(params::circle_frequency * t * (2.0 * M_PI));
-    pos_ref(1) = std::sin(params::circle_frequency * t * (2.0 * M_PI));
-    pos_ref(2) = 2.0;
+    pos_ref(0) = 0;
+    pos_ref(1) = 0;
+    pos_ref(2) = 2.1;
     yaw_ref = 0.0;
   }
+  // step response
+  if (t > 15 && t <= 45) {
+    pos_ref(0) = 0;
+    pos_ref(1) = 0;
+    pos_ref(2) = 1.1;
+    yaw_ref = 0.0;
+  }
+  // if (t > 15 && t <= 45) { // fly circles
+  //   pos_ref(0) = std::cos(params::circle_frequency * t * (2.0 * M_PI));
+  //   pos_ref(1) = std::sin(params::circle_frequency * t * (2.0 * M_PI));
+  //   pos_ref(2) = 2.0;
+  //   yaw_ref = 0.0;
+  // }
   if (t > 45) { // land
     pos_ref(0) = pos(0);
     pos_ref(1) = pos(1);
@@ -210,6 +214,26 @@ int main(int argc, char **argv) {
     vel_ref(1) = params::P_pos_XY * pos_p_error(1);
     vel_ref(2) = params::P_pos_Z * pos_p_error(2); // different gain for Z-error
 
+    // check maximum velocities and constrain.
+    if (vel_ref(0) > params::max_vel_XY) {
+      vel_ref(0) = params::max_vel_XY;
+    }
+    if (vel_ref(0) < -params::max_vel_XY) {
+      vel_ref(0) = -params::max_vel_XY;
+    }
+    if (vel_ref(1) > params::max_vel_XY) {
+      vel_ref(1) = params::max_vel_XY;
+    }
+    if (vel_ref(1) < -params::max_vel_XY) {
+      vel_ref(1) = -params::max_vel_XY;
+    }
+    if (vel_ref(2) > params::max_vel_Z_UP) {
+      vel_ref(2) = params::max_vel_Z_UP;
+    }
+    if (vel_ref(2) < -params::max_vel_Z_DOWN) {
+      vel_ref(2) = -params::max_vel_Z_DOWN;
+    }
+
     /* VELOCITY CONTROLLER */
     // last proportional velocity error
     vel_p_error_last = vel_p_error;
@@ -293,8 +317,9 @@ int main(int argc, char **argv) {
     //         << "\n";
     // }
 
-    // t, x, y, z, vx, vy, vz, roll, pitch, yaw, vroll, vpitch, vyaw
-    if (t > params::T_log) { // possibility to wait for transients to fade away
+    // t, x, y, z, vx, vy, vz, roll, pitch, yaw, vroll, vpitch, vyaw, ctrls
+    if (t > 15 && t <= 45) { //(t > params::T_log) { // possibility to wait for
+                             // transients to fade away
       if (telemetry.actuator_control_target().controls.size() != 0) {
         myLog << t << "," << telemetry.position_velocity_ned().position.north_m
               << "," << telemetry.position_velocity_ned().position.east_m << ","
