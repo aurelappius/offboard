@@ -18,7 +18,7 @@ compensators = ["Cheeseman compensation", "No compensation",
                 "High Altitude (-1m)", "Sanchez compensation", "Hayden compensation"]
 colors = ["red", "blue", "green", "olive",
           "orange", "grey", "cyan", "brown", "purple"]
-plot_flag = [False, True, True, False, True]
+plot_flag = [True, True, True, True, True]
 
 
 # t, x, y, z, vx, vy, vz, roll, pitch, yaw, vroll, vpitch, vyaw, ctrls
@@ -43,7 +43,7 @@ for i in range(0, len(sys.argv)-1):
                                                 names=header_list).to_numpy()
 
 # change height (-1.05 meters)
-data[10:15, :, 1:4] = data[10:15, :, 1:4]-1.05
+data[10:15, :, 1:4] = data[10:15, :, 1:4]-1.0
 
 # calculate average
 for i in range(0, n_compensator):
