@@ -29,10 +29,10 @@ using std::chrono::seconds;
 using std::this_thread::sleep_for;
 
 /* CONSTANTS */
-const float g = 9.81;                  // gravitational acceleration [m_s2]
-const float quadcopter_mass = 1.5;     // Quadcopter mass [kg]
-const float max_thrust = 4 * 8.9764;   // maximal thrust [N]
-const float quad_rotor_radius = 0.12;  // Quadcopter rotor radius [m]
+const float g = 9.81;                   // gravitational acceleration [m_s2]
+const float quadcopter_mass = 1.5;      // Quadcopter mass [kg]
+const float max_thrust = 4 * 8.9764;    // maximal thrust [N]
+const float quad_rotor_radius = 0.12;   // Quadcopter rotor radius [m]
 const float quad_rotor_distance = 0.35; // Quadcopter rotor distance [m]
 
 /* FUNCTION DECLARATIONS */
@@ -53,14 +53,14 @@ void trajectory_generator(float t, Eigen::Vector3f &pos,
   if (t > 0 && t <= 20) { // takeoff
     pos_ref(0) = 0;
     pos_ref(1) = 0;
-    pos_ref(2) = 2.05;
+    pos_ref(2) = 1.30;
     yaw_ref = 0.0;
   }
   // step response
   if (t > 25 && t <= 55) {
     pos_ref(0) = 0;
     pos_ref(1) = 0;
-    pos_ref(2) = 1.05;
+    pos_ref(2) = 0.30;
     yaw_ref = 0.0;
   }
   // if (t > 15 && t <= 45) { // fly circles
@@ -305,8 +305,10 @@ int main(int argc, char **argv) {
 
     // project thurst onto body frame z-axis
     float acc_proj_z_b = acc_ref.dot(body_frame.col(2));
-    float thrust_ref = (acc_proj_z_b)*quadcopter_mass;     // F=M*a
-   // thrust_ref = HaydenCompensator(thrust_ref, pos(2)); // GE compensator
+    float thrust_ref = (acc_proj_z_b)*quadcopter_mass; // F=M*a
+    if (t > 15) {
+      thrust_ref = CheesemanCompensator(thrust_ref, pos(2)); // GE compensator
+    }
     float throttle_ref = thrust_to_throttle(thrust_ref);
 
     /* COMMANDS TO PX4 */
