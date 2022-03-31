@@ -53,14 +53,14 @@ void trajectory_generator(float t, Eigen::Vector3f &pos,
   if (t > 0 && t <= 20) { // takeoff
     pos_ref(0) = 0;
     pos_ref(1) = 0;
-    pos_ref(2) = 1.30;
+    pos_ref(2) = 1.25;
     yaw_ref = 0.0;
   }
   // step response
   if (t > 25 && t <= 55) {
     pos_ref(0) = 0;
     pos_ref(1) = 0;
-    pos_ref(2) = 0.30;
+    pos_ref(2) = 0.25;
     yaw_ref = 0.0;
   }
   // if (t > 15 && t <= 45) { // fly circles
