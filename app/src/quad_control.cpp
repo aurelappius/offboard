@@ -307,7 +307,7 @@ int main(int argc, char **argv) {
     float acc_proj_z_b = acc_ref.dot(body_frame.col(2));
     float thrust_ref = (acc_proj_z_b)*quadcopter_mass; // F=M*a
     if (t > 15) {
-      thrust_ref = CheesemanCompensator(thrust_ref, pos(2)); // GE compensator
+     thrust_ref = SanchezCompensator(thrust_ref, pos(2)); // GE compensator
     }
     float throttle_ref = thrust_to_throttle(thrust_ref);
 
