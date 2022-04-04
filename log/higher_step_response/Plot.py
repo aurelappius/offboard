@@ -13,7 +13,7 @@ z_plt = fig_xyz.add_subplot(111)
 
 # global variables
 deviation = 1
-n_compensator = int(len(sys.argv)/5)
+n_compensator = len(sys.argv)-1
 compensators = ["Cheeseman compensation", "No compensation",
                 "High Altitude (-1m)", "Sanchez compensation", "Hayden compensation"]
 colors = ["red", "blue", "green", "olive",
@@ -33,8 +33,8 @@ header_list = [
 
 # initialize arrays
 data = np.empty((len(sys.argv), 2000, 4))
-data_avg = np.empty((5, 2000, 3))
-data_std = np.empty((5, 2000, 3))
+# data_avg = np.empty((5, 2000, 3))
+# data_std = np.empty((5, 2000, 3))
 
 # read data
 for i in range(0, len(sys.argv)-1):
@@ -43,22 +43,18 @@ for i in range(0, len(sys.argv)-1):
                                                 names=header_list).to_numpy()
 
 # change height (-1.05 meters)
-data[10:15, :, 1:4] = data[10:15, :, 1:4]-1.0
-
-# calculate average
-for i in range(0, n_compensator):
-    data_avg[i, :, :] = np.mean(data[5*i:5*(i+1), :, 1:4], 0)
-    data_std[i, :, :] = np.std(data[5*i:5*(i+1), :, 1:4], 0)
+data[2, :, 1:4] = data[2, :, 1:4] - 0.8
+# # calculate average
+# for i in range(0, n_compensator):
+#     data_avg[i, :, :] = np.mean(data[5*i:5*(i+1), :, 1:4], 0)
+#     data_std[i, :, :] = np.std(data[5*i:5*(i+1), :, 1:4], 0)
 
 
 # plot curves
 for i in range(0, n_compensator):
     if(plot_flag[i]):
-        z_plt.plot(data[0, 0:1700, 0], data_avg[i,
-                                                0:1700, 2], c=colors[i], label=compensators[i])
-        z_plt.fill_between(data[0, 0:1700, 0], data_avg[i, 0:1700, 2] -
-                           deviation*data_std[i, 0:1700, 2], data_avg[i, 0:1700, 2]+deviation*data_std[i, 0:1700, 2], color=colors[i], alpha=0.3)
-
+        z_plt.plot(data[0, 0:1700, 0], data[i,
+                                            0:1700, 3], c=colors[i], label=compensators[i])
 
 z_plt.set_xlabel("x [m]")
 z_plt.set_ylabel("t [s]")
