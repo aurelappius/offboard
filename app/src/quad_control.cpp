@@ -37,11 +37,14 @@ const float quad_rotor_distance = 0.35; // Quadcopter rotor distance [m]
 
 /* FUNCTION DECLARATIONS */
 // thrust-throttle relation (linear)
-float thrust_to_throttle(float thrust) {
-  if (thrust > max_thrust) {
+float thrust_to_throttle(float thrust)
+{
+  if (thrust > max_thrust)
+  {
     return 1;
   }
-  if (thrust < 0) {
+  if (thrust < 0)
+  {
     return 0;
   }
   return (0.02394 * thrust + 0.1644);
@@ -49,15 +52,18 @@ float thrust_to_throttle(float thrust) {
 
 // reference generation
 void trajectory_generator(float t, Eigen::Vector3f &pos,
-                          Eigen::Vector3f &pos_ref, float &yaw_ref) {
-  if (t > 0 && t <= 20) { // takeoff
+                          Eigen::Vector3f &pos_ref, float &yaw_ref)
+{
+  if (t > 0 && t <= 20)
+  { // takeoff
     pos_ref(0) = 0;
     pos_ref(1) = 0;
     pos_ref(2) = 1.25;
     yaw_ref = 0.0;
   }
   // step response
-  if (t > 25 && t <= 55) {
+  if (t > 25 && t <= 55)
+  {
     pos_ref(0) = 0;
     pos_ref(1) = 0;
     pos_ref(2) = 0.25;
@@ -69,7 +75,8 @@ void trajectory_generator(float t, Eigen::Vector3f &pos,
   //   pos_ref(2) = 2.0;
   //   yaw_ref = 0.0;
   // }
-  if (t > 55) { // land
+  if (t > 55)
+  { // land
     std::cout << "landing now" << std::endl;
     pos_ref(0) = pos(0);
     pos_ref(1) = pos(1);
@@ -79,25 +86,29 @@ void trajectory_generator(float t, Eigen::Vector3f &pos,
 }
 
 // Cheeseman compensator
-float CheesemanCompensator(float throttle_ref, float z) {
+float CheesemanCompensator(float throttle_ref, float z)
+{
   return throttle_ref / (1.0 - std::pow((quad_rotor_radius / (4 * z)), 2));
 }
 
 // Nobahari compensator (R_eq = 2.5*R)
-float NobahariCompensator(float throttle_ref, float z) {
+float NobahariCompensator(float throttle_ref, float z)
+{
   return throttle_ref /
          (1.0 - std::pow((2.5 * quad_rotor_radius / (4 * z)), 2));
 }
 
 // Hayden compensator
-float HaydenCompensator(float throttle_ref, float z) {
+float HaydenCompensator(float throttle_ref, float z)
+{
   return throttle_ref * std::pow(0.9926 + 0.03794 * 4 * quad_rotor_radius *
                                               quad_rotor_radius / (z * z),
                                  2.0 / 3.0);
 }
 
 // Sanchez compensator
-float SanchezCompensator(float throttle_ref, float z) {
+float SanchezCompensator(float throttle_ref, float z)
+{
   float d = quad_rotor_distance;
   float R = quad_rotor_radius;
   return throttle_ref /
@@ -107,7 +118,8 @@ float SanchezCompensator(float throttle_ref, float z) {
               (z / std::pow(std::pow(2 * d * d + 4 * z * z, 3), 0.5)));
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
   /* LOAD YAML PARAMETERS */
   set_parameters("app/parameters/params.yaml");
 
@@ -118,7 +130,8 @@ int main(int argc, char **argv) {
   std::cout << "Started logging to log/" << Name << ".csv\n";
 
   /* INITIALIZE MAVSDK */
-  if (argc != 2) {
+  if (argc != 2)
+  {
     usage(argv[0]);
     return 1;
   }
@@ -126,13 +139,15 @@ int main(int argc, char **argv) {
   Mavsdk mavsdk;
   ConnectionResult connection_result = mavsdk.add_any_connection(argv[1]);
 
-  if (connection_result != ConnectionResult::Success) {
+  if (connection_result != ConnectionResult::Success)
+  {
     std::cerr << "Connection failed: " << connection_result << '\n';
     return 1;
   }
 
   auto system = get_system(mavsdk);
-  if (!system) {
+  if (!system)
+  {
     return 1;
   }
 
@@ -198,7 +213,8 @@ int main(int argc, char **argv) {
   float t = 0;
   const float T_s_sec = float(params::T_s) / 1000.0;
 
-  for (int i = 0;; i++) { // control loop at 50Hz
+  for (int i = 0;; i++)
+  { // control loop at 50Hz
     // indices -> real-time
     t = float(i * params::T_s) / 1000.0;
 
@@ -241,22 +257,28 @@ int main(int argc, char **argv) {
     vel_ref(2) = params::P_pos_Z * pos_p_error(2); // different gain for Z-error
 
     // check maximum velocities and constrain.
-    if (vel_ref(0) > params::max_vel_XY) {
+    if (vel_ref(0) > params::max_vel_XY)
+    {
       vel_ref(0) = params::max_vel_XY;
     }
-    if (vel_ref(0) < -params::max_vel_XY) {
+    if (vel_ref(0) < -params::max_vel_XY)
+    {
       vel_ref(0) = -params::max_vel_XY;
     }
-    if (vel_ref(1) > params::max_vel_XY) {
+    if (vel_ref(1) > params::max_vel_XY)
+    {
       vel_ref(1) = params::max_vel_XY;
     }
-    if (vel_ref(1) < -params::max_vel_XY) {
+    if (vel_ref(1) < -params::max_vel_XY)
+    {
       vel_ref(1) = -params::max_vel_XY;
     }
-    if (vel_ref(2) > params::max_vel_Z_UP) {
+    if (vel_ref(2) > params::max_vel_Z_UP)
+    {
       vel_ref(2) = params::max_vel_Z_UP;
     }
-    if (vel_ref(2) < -params::max_vel_Z_DOWN) {
+    if (vel_ref(2) < -params::max_vel_Z_DOWN)
+    {
       vel_ref(2) = -params::max_vel_Z_DOWN;
     }
 
@@ -306,8 +328,9 @@ int main(int argc, char **argv) {
     // project thurst onto body frame z-axis
     float acc_proj_z_b = acc_ref.dot(body_frame.col(2));
     float thrust_ref = (acc_proj_z_b)*quadcopter_mass; // F=M*a
-    if (t > 15) {
-     thrust_ref = SanchezCompensator(thrust_ref, pos(2)); // GE compensator
+    if (t > 15)
+    {
+      thrust_ref = SanchezCompensator(thrust_ref, pos(2)); // GE compensator
     }
     float throttle_ref = thrust_to_throttle(thrust_ref);
 
@@ -346,9 +369,11 @@ int main(int argc, char **argv) {
     // }
 
     // t, x, y, z, vx, vy, vz, roll, pitch, yaw, vroll, vpitch, vyaw, ctrls
-    if (t > 20 && t <= 55) { //(t > params::T_log) { // possibility to wait for
-                             // transients to fade away
-      if (telemetry.actuator_control_target().controls.size() != 0) {
+    if (t > 20 && t <= 55)
+    { //(t > params::T_log) { // possibility to wait for
+      // transients to fade away
+      if (telemetry.actuator_control_target().controls.size() != 0)
+      {
         myLog << t - 10.0 << ","
               << telemetry.position_velocity_ned().position.north_m << ","
               << telemetry.position_velocity_ned().position.east_m << ","
