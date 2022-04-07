@@ -85,16 +85,14 @@ void trajectory_generator(float t, Eigen::Vector3f &pos,
   }
 }
 
-// Cheeseman compensator
 float CheesemanCompensator(float throttle_ref, float z)
 {
-  return throttle_ref / (1.0 - std::pow((quad_rotor_radius / (4 * z)), 2));
+  return throttle_ref * (1.0 - std::pow((quad_rotor_radius / (4 * z)), 2));
 }
-
 // Nobahari compensator (R_eq = 2.5*R)
 float NobahariCompensator(float throttle_ref, float z)
 {
-  return throttle_ref /
+  return throttle_ref *
          (1.0 - std::pow((2.5 * quad_rotor_radius / (4 * z)), 2));
 }
 
@@ -103,7 +101,7 @@ float HaydenCompensator(float throttle_ref, float z)
 {
   return throttle_ref * std::pow(0.9926 + 0.03794 * 4 * quad_rotor_radius *
                                               quad_rotor_radius / (z * z),
-                                 2.0 / 3.0);
+                                 (-2.0 / 3.0));
 }
 
 // Sanchez compensator
@@ -111,11 +109,12 @@ float SanchezCompensator(float throttle_ref, float z)
 {
   float d = quad_rotor_distance;
   float R = quad_rotor_radius;
-  return throttle_ref /
+  return throttle_ref *
          (1 - std::pow(R / (4 * z), 2) -
           R * R * (z / std::pow(std::pow(d * d + 4 * z * z, 3), 0.5)) -
           0.5 * R * R *
-              (z / std::pow(std::pow(2 * d * d + 4 * z * z, 3), 0.5)));
+              (z / std::pow(std::pow(2 * d * d + 4 * z * z, 3), 0.5) *
+               Sanchez_constant));
 }
 
 int main(int argc, char **argv)
