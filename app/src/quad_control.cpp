@@ -34,6 +34,7 @@ const float quadcopter_mass = 1.5;      // Quadcopter mass [kg]
 const float max_thrust = 4 * 8.9764;    // maximal thrust [N]
 const float quad_rotor_radius = 0.12;   // Quadcopter rotor radius [m]
 const float quad_rotor_distance = 0.35; // Quadcopter rotor distance [m]
+const float sanchez_constant = 2.0;
 
 /* FUNCTION DECLARATIONS */
 // thrust-throttle relation (linear)
@@ -114,7 +115,7 @@ float SanchezCompensator(float throttle_ref, float z)
           R * R * (z / std::pow(std::pow(d * d + 4 * z * z, 3), 0.5)) -
           0.5 * R * R *
               (z / std::pow(std::pow(2 * d * d + 4 * z * z, 3), 0.5) *
-               Sanchez_constant));
+               sanchez_constant));
 }
 
 int main(int argc, char **argv)
