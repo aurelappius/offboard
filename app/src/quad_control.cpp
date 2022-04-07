@@ -59,7 +59,7 @@ void trajectory_generator(float t, Eigen::Vector3f &pos,
   { // takeoff
     pos_ref(0) = 0;
     pos_ref(1) = 0;
-    pos_ref(2) = 1.25;
+    pos_ref(2) = 1.20;
     yaw_ref = 0.0;
   }
   // step response
@@ -67,7 +67,7 @@ void trajectory_generator(float t, Eigen::Vector3f &pos,
   {
     pos_ref(0) = 0;
     pos_ref(1) = 0;
-    pos_ref(2) = 0.25;
+    pos_ref(2) = 0.20;
     yaw_ref = 0.0;
   }
   // if (t > 15 && t <= 45) { // fly circles
@@ -217,7 +217,7 @@ int main(int argc, char **argv)
   { // control loop at 50Hz
     // indices -> real-time
     t = float(i * params::T_s) / 1000.0;
-
+	//std::cout<<"offboarding"<<std::endl;
     /* CURRENT STATE */
     // current position
     pos(0) = telemetry.position_velocity_ned().position.north_m;
@@ -330,10 +330,10 @@ int main(int argc, char **argv)
     float thrust_ref = (acc_proj_z_b)*quadcopter_mass; // F=M*a
     if (t > 15)
     {
-      thrust_ref = SanchezCompensator(thrust_ref, pos(2)); // GE compensator
+      thrust_ref = NobahariCompensator(thrust_ref, pos(2)); // GE compensator
     }
     float throttle_ref = thrust_to_throttle(thrust_ref);
-
+	std::cout<<throttle_ref<<std::endl;
     /* COMMANDS TO PX4 */
     // velocity commands (negative sign to account for xyz -> NED coordinate
     // change)

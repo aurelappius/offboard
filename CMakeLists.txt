@@ -11,5 +11,5 @@ find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
 
 add_subdirectory(app)
-add_subdirectory(tests)
+#add_subdirectory(tests)
 #add_subdirectory(lib)
