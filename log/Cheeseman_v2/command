@@ -1,0 +1,1 @@
+python3 Plot.py CHEESEMAN_0*.csv LOW_0*.csv HIGH_0*.csv SANCHEZ_0*.csv HAYDEN_0*.csv

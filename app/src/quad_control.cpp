@@ -13,6 +13,7 @@
 // MAVSDK
 #include <mavsdk/mavsdk.h>
 #include <mavsdk/plugins/action/action.h>
+#include <mavsdk/plugins/mavlink_passthrough/mavlink_passthrough.h>
 #include <mavsdk/plugins/offboard/offboard.h>
 #include <mavsdk/plugins/telemetry/telemetry.h>
 
@@ -35,6 +36,11 @@ const float max_thrust = 4 * 8.9764;    // maximal thrust [N]
 const float quad_rotor_radius = 0.12;   // Quadcopter rotor radius [m]
 const float quad_rotor_distance = 0.35; // Quadcopter rotor distance [m]
 const float sanchez_constant = 2.0;
+
+/* RPM, VOLTAGE, CURRENT */
+int32_t rpm[4] = {0, 0, 0, 0};   // RPM [rotations per minute]
+float voltage[4] = {0, 0, 0, 0}; // Voltage [Volts]
+float current[4] = {0, 0, 0, 0}; // Current [Ampere]
 
 /* FUNCTION DECLARATIONS */
 // thrust-throttle relation (linear)
@@ -86,6 +92,20 @@ void trajectory_generator(float t, Eigen::Vector3f &pos,
   }
 }
 
+// motor speed callback function
+std::function<void(const mavlink_message_t &)> MotorSpeedCallback =
+    [](const mavlink_message_t &raw_msg)
+{
+  mavlink_msg_esc_status_get_rpm(&raw_msg, &rpm[0]);
+  mavlink_msg_esc_status_get_voltage(&raw_msg, &voltage[0]);
+  mavlink_msg_esc_status_get_current(&raw_msg, &current[0]);
+
+  for (int i = 0; i < 4; i++)
+  {
+    std::cout << "m " << i + 1 << ": rpm: \t" << rpm[i] << "\t volt: \t" << voltage[i] << "\t amps: \t" << current[i] << std::endl;
+  }
+};
+
 float CheesemanCompensator(float throttle_ref, float z)
 {
   return throttle_ref * (1.0 - std::pow((quad_rotor_radius / (4 * z)), 2));
@@ -120,6 +140,7 @@ float SanchezCompensator(float throttle_ref, float z)
 
 int main(int argc, char **argv)
 {
+
   /* LOAD YAML PARAMETERS */
   set_parameters("app/parameters/params.yaml");
 
@@ -151,11 +172,16 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  auto action = Action{system};       // for arming / disarming etc
-  auto offboard = Offboard{system};   // for offboard control
-  auto telemetry = Telemetry{system}; // for telemetry services
+  auto action = Action{system};              // for arming / disarming etc
+  auto offboard = Offboard{system};          // for offboard control
+  auto telemetry = Telemetry{system};        // for telemetry services
+  auto mavlink = MavlinkPassthrough{system}; // for mavlink passtrough
 
   std::cout << "System is ready\n";
+
+  /* MAVLINK MOTOR SPEED MESSAGES */
+  std::cout << "subscribe to motor speeds" << std::endl;
+  mavlink.subscribe_message_async(291, MotorSpeedCallback);
 
   /* ARM QUADCOPTER */
   const auto arm_result = action.arm();
@@ -217,7 +243,7 @@ int main(int argc, char **argv)
   { // control loop at 50Hz
     // indices -> real-time
     t = float(i * params::T_s) / 1000.0;
-	//std::cout<<"offboarding"<<std::endl;
+    // std::cout<<"offboarding"<<std::endl;
     /* CURRENT STATE */
     // current position
     pos(0) = telemetry.position_velocity_ned().position.north_m;
@@ -333,7 +359,7 @@ int main(int argc, char **argv)
       thrust_ref = NobahariCompensator(thrust_ref, pos(2)); // GE compensator
     }
     float throttle_ref = thrust_to_throttle(thrust_ref);
-	std::cout<<throttle_ref<<std::endl;
+    // std::cout<<throttle_ref<<std::endl;
     /* COMMANDS TO PX4 */
     // velocity commands (negative sign to account for xyz -> NED coordinate
     // change)
@@ -355,6 +381,7 @@ int main(int argc, char **argv)
     att_cmd.pitch_deg = -euler_ref(1) * (180.0 / M_PI);
     att_cmd.yaw_deg = -euler_ref(2) * (180.0 / M_PI);
     att_cmd.thrust_value = throttle_ref;
+    att_cmd.thrust_value = 0.2 + 0.5 * sin(0.1 * t); // for rpm measurment testing
     offboard.set_attitude(att_cmd);
 
     /* LOGGING*/
@@ -374,7 +401,7 @@ int main(int argc, char **argv)
       // transients to fade away
       if (telemetry.actuator_control_target().controls.size() != 0)
       {
-        myLog << t - 10.0 << ","
+        myLog << t << ","
               << telemetry.position_velocity_ned().position.north_m << ","
               << telemetry.position_velocity_ned().position.east_m << ","
               << -telemetry.position_velocity_ned().position.down_m << ","
@@ -390,7 +417,19 @@ int main(int argc, char **argv)
               << telemetry.actuator_control_target().controls.at(0) << ","
               << telemetry.actuator_control_target().controls.at(1) << ","
               << telemetry.actuator_control_target().controls.at(2) << ","
-              << telemetry.actuator_control_target().controls.at(3) << "\n";
+              << telemetry.actuator_control_target().controls.at(3) << ","
+              << rpm[0] << ","
+              << rpm[1] << ","
+              << rpm[2] << ","
+              << rpm[3] << ","
+              << voltage[0] << ","
+              << voltage[1] << ","
+              << voltage[2] << ","
+              << voltage[3] << ","
+              << current[0] << ","
+              << current[1] << ","
+              << current[2] << ","
+              << current[3] << "\n";
       }
     }
 
