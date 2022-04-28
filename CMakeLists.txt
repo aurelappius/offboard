@@ -10,6 +10,7 @@ find_package(MAVSDK REQUIRED)
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
 
-add_subdirectory(app)
+add_subdirectory(app_quad_control)
+add_subdirectory(app_thrust_stand)
 #add_subdirectory(tests)
 #add_subdirectory(lib)

@@ -1,0 +1,39 @@
+throttle:       0.15     rpm:   2698.48  volt:  16.72    amps:  0.3116
+now setting throttle = 0.2
+throttle:       0.2      rpm:   3223.85  volt:  16.71    amps:  0.494302
+now setting throttle = 0.25
+throttle:       0.25     rpm:   3702.06  volt:  16.7     amps:  0.701734
+now setting throttle = 0.3
+throttle:       0.3      rpm:   4209.7   volt:  16.69    amps:  1.09133
+now setting throttle = 0.35
+throttle:       0.35     rpm:   4777.34  volt:  16.6727  amps:  1.47777
+now setting throttle = 0.4
+throttle:       0.4      rpm:   5182.43  volt:  16.66    amps:  1.9153
+now setting throttle = 0.45
+throttle:       0.45     rpm:   5604.95  volt:  16.6418  amps:  2.43196
+now setting throttle = 0.5
+throttle:       0.5      rpm:   6133.74  volt:  16.6156  amps:  3.0542
+now setting throttle = 0.55
+throttle:       0.55     rpm:   6684.19  volt:  16.5907  amps:  3.76604
+now setting throttle = 0.6
+throttle:       0.6      rpm:   6926.21  volt:  16.5611  amps:  4.54335
+now setting throttle = 0.65
+throttle:       0.65     rpm:   7391.07  volt:  16.5313  amps:  5.39932
+now setting throttle = 0.7
+throttle:       0.7      rpm:   7881.86  volt:  16.4938  amps:  6.35533
+now setting throttle = 0.75
+throttle:       0.75     rpm:   8349.4   volt:  16.4499  amps:  7.32119
+now setting throttle = 0.8
+throttle:       0.8      rpm:   8527.63  volt:  16.4039  amps:  8.33529
+now setting throttle = 0.85
+throttle:       0.85     rpm:   8841.98  volt:  16.354   amps:  9.47975
+now setting throttle = 0.9
+throttle:       0.9      rpm:   9283.28  volt:  16.2922  amps:  10.8572
+now setting throttle = 0.95
+throttle:       0.95     rpm:   9549.62  volt:  16.2397  amps:  12.1453
+now setting throttle = 1
+throttle:       1        rpm:   9897.33  volt:  16.1693  amps:  13.2915
+
+
+thurst in grams:
+73,107,145,190,246,301,358,416,485,553,624,700,768,842,920,1014,1090,1175
