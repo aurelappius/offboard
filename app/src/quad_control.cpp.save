@@ -87,7 +87,7 @@ void trajectory_generator(float t, Eigen::Vector3f &pos,
 }
 
 float CheesemanCompensator(float throttle_ref, float z)
-{
+
   return throttle_ref * (1.0 - std::pow((quad_rotor_radius / (4 * z)), 2));
 }
 // Nobahari compensator (R_eq = 2.5*R)
@@ -104,9 +104,11 @@ float HaydenCompensator(float throttle_ref, float z)
                                               quad_rotor_radius / (z * z),
                                  (-2.0 / 3.0));
 }
-float AppiusStaticCompensator(float throttle_ref, float z){
-  return throttle_ref /(0.11413538 * std::exp(-5.38792044*z)+1.0275278);
+
+float AppiusCompensatorStatic(float throttle_ref, float z){
+  return throttle_ref * 
 }
+
 // Sanchez compensator
 float SanchezCompensator(float throttle_ref, float z)
 {
@@ -332,7 +334,7 @@ int main(int argc, char **argv)
     float thrust_ref = (acc_proj_z_b)*quadcopter_mass; // F=M*a
     if (t > 15)
     {
-      thrust_ref = AppiusStaticCompensator(thrust_ref, pos(2)); // GE compensator
+      thrust_ref = NobahariCompensator(thrust_ref, pos(2)); // GE compensator
     }
     float throttle_ref = thrust_to_throttle(thrust_ref);
 	std::cout<<throttle_ref<<std::endl;
