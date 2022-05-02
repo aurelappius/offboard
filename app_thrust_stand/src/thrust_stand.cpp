@@ -1,15 +1,9 @@
-#include <Eigen/Dense>
 #include <chrono>
-#include <cmath>
+#include <thread>
 #include <filesystem>
 #include <fstream>
-#include <future>
 #include <iostream>
-#include <math.h>
-#include <queue>
-#include <thread>
-#include <time.h>
-
+#include <future>
 // MAVSDK
 #include <mavsdk/mavsdk.h>
 #include <mavsdk/plugins/action/action.h>

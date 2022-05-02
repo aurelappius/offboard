@@ -7,9 +7,6 @@ target_include_directories(thrust_stand PUBLIC include)
 
 target_link_libraries(thrust_stand PRIVATE
 Eigen3::Eigen
-#comm_lib
 MAVSDK::mavsdk
 yaml-cpp
-fastcdr 
-fastrtps
 )

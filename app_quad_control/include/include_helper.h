@@ -2,15 +2,13 @@
 
 // general dependencies
 #include <Eigen/Dense>
-#include <chrono>
 #include <cmath>
+#include <chrono>
+#include <thread>
 #include <filesystem>
 #include <fstream>
-#include <future>
 #include <iostream>
-#include <queue>
-#include <thread>
-#include <time.h>
+#include <future>
 
 // MAVSDK
 #include <mavsdk/mavsdk.h>

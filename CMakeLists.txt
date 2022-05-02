@@ -4,13 +4,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find requirements
-find_package(fastcdr REQUIRED)
-find_package(fastrtps REQUIRED)
 find_package(MAVSDK REQUIRED)
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
 
 
 add_subdirectory(app_quad_control)
 add_subdirectory(app_thrust_stand)
-#add_subdirectory(tests)
-#add_subdirectory(lib)
