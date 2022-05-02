@@ -1,41 +1,9 @@
-#include <Eigen/Dense>
-#include <chrono>
-#include <cmath>
-#include <filesystem>
-#include <fstream>
-#include <future>
-#include <iostream>
-#include <math.h>
-#include <queue>
-#include <thread>
-#include <time.h>
-
-// MAVSDK
-#include <mavsdk/mavsdk.h>
-#include <mavsdk/plugins/action/action.h>
-#include <mavsdk/plugins/mavlink_passthrough/mavlink_passthrough.h>
-#include <mavsdk/plugins/offboard/offboard.h>
-#include <mavsdk/plugins/telemetry/telemetry.h>
-
-// yaml
-#include <yaml-cpp/yaml.h>
-
-// helpers
-#include "mavsdk_helper.h"
-#include "yaml_helper.h"
+#include "include_helper.h"
 
 using namespace mavsdk;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
 using std::this_thread::sleep_for;
-
-/* CONSTANTS */
-const float g = 9.81;                   // gravitational acceleration [m_s2]
-const float quadcopter_mass = 1.5;      // Quadcopter mass [kg]
-const float max_thrust = 4 * 8.9764;    // maximal thrust [N]
-const float quad_rotor_radius = 0.12;   // Quadcopter rotor radius [m]
-const float quad_rotor_distance = 0.35; // Quadcopter rotor distance [m]
-const float sanchez_constant = 2.0;
 
 /* RPM, VOLTAGE, CURRENT */
 int32_t rpm[4] = {0, 0, 0, 0};   // RPM [rotations per minute]
@@ -46,7 +14,7 @@ float current[4] = {0, 0, 0, 0}; // Current [Ampere]
 // thrust-throttle relation (linear)
 float thrust_to_throttle(float thrust)
 {
-  if (thrust > max_thrust)
+  if (thrust > 4 * params::max_motor_thrust)
   {
     return 1;
   }
@@ -55,41 +23,6 @@ float thrust_to_throttle(float thrust)
     return 0;
   }
   return (0.02394 * thrust + 0.1644);
-}
-
-// reference generation
-void trajectory_generator(float t, Eigen::Vector3f &pos,
-                          Eigen::Vector3f &pos_ref, float &yaw_ref)
-{
-  if (t > 0 && t <= 20)
-  { // takeoff
-    pos_ref(0) = 0;
-    pos_ref(1) = 0;
-    pos_ref(2) = 1.20;
-    yaw_ref = 0.0;
-  }
-  // step response
-  if (t > 25 && t <= 55)
-  {
-    pos_ref(0) = 0;
-    pos_ref(1) = 0;
-    pos_ref(2) = 0.20;
-    yaw_ref = 0.0;
-  }
-  // if (t > 15 && t <= 45) { // fly circles
-  //   pos_ref(0) = std::cos(params::circle_frequency * t * (2.0 * M_PI));
-  //   pos_ref(1) = std::sin(params::circle_frequency * t * (2.0 * M_PI));
-  //   pos_ref(2) = 2.0;
-  //   yaw_ref = 0.0;
-  // }
-  if (t > 55)
-  { // land
-    std::cout << "landing now" << std::endl;
-    pos_ref(0) = pos(0);
-    pos_ref(1) = pos(1);
-    pos_ref(2) = 0.0;
-    yaw_ref = 0.0;
-  }
 }
 
 // motor speed callback function
@@ -105,38 +38,6 @@ std::function<void(const mavlink_message_t &)> MotorSpeedCallback =
     std::cout << "m " << i + 1 << ": rpm: \t" << rpm[i] << "\t volt: \t" << voltage[i] << "\t amps: \t" << current[i] << std::endl;
   }
 };
-
-float CheesemanCompensator(float throttle_ref, float z)
-{
-  return throttle_ref * (1.0 - std::pow((quad_rotor_radius / (4 * z)), 2));
-}
-// Nobahari compensator (R_eq = 2.5*R)
-float NobahariCompensator(float throttle_ref, float z)
-{
-  return throttle_ref *
-         (1.0 - std::pow((2.5 * quad_rotor_radius / (4 * z)), 2));
-}
-
-// Hayden compensator
-float HaydenCompensator(float throttle_ref, float z)
-{
-  return throttle_ref * std::pow(0.9926 + 0.03794 * 4 * quad_rotor_radius *
-                                              quad_rotor_radius / (z * z),
-                                 (-2.0 / 3.0));
-}
-
-// Sanchez compensator
-float SanchezCompensator(float throttle_ref, float z)
-{
-  float d = quad_rotor_distance;
-  float R = quad_rotor_radius;
-  return throttle_ref *
-         (1 - std::pow(R / (4 * z), 2) -
-          R * R * (z / std::pow(std::pow(d * d + 4 * z * z, 3), 0.5)) -
-          0.5 * R * R *
-              (z / std::pow(std::pow(2 * d * d + 4 * z * z, 3), 0.5) *
-               sanchez_constant));
-}
 
 int main(int argc, char **argv)
 {
@@ -172,6 +73,7 @@ int main(int argc, char **argv)
     return 1;
   }
 
+  /* LOAD PLUGINS */
   auto action = Action{system};              // for arming / disarming etc
   auto offboard = Offboard{system};          // for offboard control
   auto telemetry = Telemetry{system};        // for telemetry services
@@ -272,7 +174,7 @@ int main(int argc, char **argv)
     //           << std::endl;
 
     /* TRAJECTORY GENERATION */
-    trajectory_generator(t, pos, pos_ref, yaw_ref);
+    stepResponse(t, pos, pos_ref, yaw_ref);
 
     /* POSITION CONTROLLER */
     // proportional position error
@@ -330,7 +232,7 @@ int main(int argc, char **argv)
 
     /* CONVERSION TO ANGLES AND THRUST */
     // add gravitational acceleration
-    acc_ref(2) = acc_ref(2) - g;
+    acc_ref(2) = acc_ref(2) - params::g;
 
     // y-vector of global coordinte system turned around yaw_ref
     Eigen::Vector3f y_c(-std::sin(yaw_ref), std::cos(yaw_ref), 0);
@@ -353,7 +255,7 @@ int main(int argc, char **argv)
 
     // project thurst onto body frame z-axis
     float acc_proj_z_b = acc_ref.dot(body_frame.col(2));
-    float thrust_ref = (acc_proj_z_b)*quadcopter_mass; // F=M*a
+    float thrust_ref = (acc_proj_z_b)*params::quadcopter_mass; // F=M*a
     if (t > 15)
     {
       thrust_ref = NobahariCompensator(thrust_ref, pos(2)); // GE compensator

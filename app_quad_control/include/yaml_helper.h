@@ -1,37 +1,45 @@
 #pragma once
 
 // namespace params
-namespace params {
-float circle_frequency;
-float P_vel_XY;
-float I_vel_XY;
-float D_vel_XY;
-float P_vel_Z;
-float I_vel_Z;
-float D_vel_Z;
-float P_pos_XY;
-float P_pos_Z;
-float T_log;
-float max_vel_Z_DOWN;
-float max_vel_Z_UP;
-float max_vel_XY;
-int T_s;
+namespace params
+{
+  float P_vel_XY;
+  float I_vel_XY;
+  float D_vel_XY;
+  float P_vel_Z;
+  float I_vel_Z;
+  float D_vel_Z;
+  float P_pos_XY;
+  float P_pos_Z;
+  float T_log;
+  float max_vel_Z_DOWN;
+  float max_vel_Z_UP;
+  float max_vel_XY;
+  int T_s;
+  float g;
+  float quadcopter_mass;
+  float max_motor_thrust;
 } // namespace params
 
 // Checks whether given yaml file exists
-inline void yaml_file_check(std::string yaml_file) {
+inline void yaml_file_check(std::string yaml_file)
+{
 
-  try {
+  try
+  {
     if (std::filesystem::exists(yaml_file) == false)
       throw(yaml_file);
-  } catch (std::string yaml_file) {
+  }
+  catch (std::string yaml_file)
+  {
     std::cerr << "YAML file error: " << yaml_file << " does not exist" << '\n';
     std::exit(EXIT_FAILURE);
   }
 }
 
 // loads parameters
-inline void set_parameters(const std::string setpoint_path) {
+inline void set_parameters(const std::string setpoint_path)
+{
 
   // check if yaml file exists
   yaml_file_check(setpoint_path);
@@ -39,7 +47,6 @@ inline void set_parameters(const std::string setpoint_path) {
   YAML::Node commands_yaml = YAML::LoadFile(setpoint_path);
 
   // Set parameters
-  params::circle_frequency = commands_yaml["circle_frequency"].as<float>();
   params::P_vel_XY = commands_yaml["P_vel_XY"].as<float>();
   params::I_vel_XY = commands_yaml["I_vel_XY"].as<float>();
   params::D_vel_XY = commands_yaml["D_vel_XY"].as<float>();
@@ -53,4 +60,7 @@ inline void set_parameters(const std::string setpoint_path) {
   params::max_vel_XY = commands_yaml["max_vel_XY"].as<float>();
   params::T_s = commands_yaml["T_s"].as<int>();
   params::T_log = commands_yaml["T_log"].as<float>();
+  params::g = commands_yaml["g"].as<float>();
+  params::quadcopter_mass = commands_yaml["quadcopter_mass"].as<float>();
+  params::max_motor_thrust = commands_yaml["max_motor_thrust"].as<float>();
 }

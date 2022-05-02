@@ -1,3 +1,4 @@
+############## Controller Parameters ##############
 P_pos_XY: 0.95
 P_pos_Z: 0.95
 
@@ -14,7 +15,12 @@ max_vel_Z_DOWN: 1.0
 max_vel_Z_UP: 3.0
 
 T_s: 20 # sampling time [milliseconds]
+
+############## Logging Parameters ##############
+
 T_log: 0 # logging start time [seconds]
 
-#reference generation
-circle_frequency: 0.1
+############## Quadcopter Parameters ##############
+g: 9.81                     #gravitational acceleration [m_s2]
+quadcopter_mass: 1.5        # Quadcopter mass [kg]
+max_motor_thrust: 8.9764    # maximal thrust of one motor [N]
