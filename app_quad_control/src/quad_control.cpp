@@ -346,3 +346,28 @@ int main(int argc, char **argv)
 
   return 0;
 }
+
+// CODE TO DEBUG TRAJECTORIES
+/*
+
+int main(int argc, char **argv)
+{
+  float t = 0;
+  int T_s = 20;
+  Eigen::Vector3f pos_ref(0, 0, 0);
+  Eigen::Vector3f pos(0, 0, 0);
+  float yaw_ref = 0;
+  for (int i = 0;; i++)
+  {
+    t = float(i * T_s) / 1000.0;
+    // stepResponse(t, pos, pos_ref, yaw_ref); //-> works
+    // circleStepResponse(t, pos, pos_ref, yaw_ref); //-> works
+    // staticDataCollection(t, pos, pos_ref, yaw_ref); //-> works
+    // verticalSpeedDataCollection(t, pos, pos_ref, yaw_ref); //->works
+    std::cout
+        << "t: \t" << t << "\t x: \t" << pos_ref(0) << "\t y: \t" << pos_ref(1) << "\t z: \t" << pos_ref(2) << std::endl;
+    sleep_for(milliseconds(T_s)); // 50Hz
+  }
+}
+
+*/
