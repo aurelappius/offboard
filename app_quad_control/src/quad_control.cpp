@@ -175,7 +175,7 @@ int main(int argc, char **argv)
 
     /* TRAJECTORY GENERATION */
     //stepResponse(t, pos, pos_ref, yaw_ref);
-verticalSpeedDataCollection(t,pos,pos_ref,yaw_ref);
+circleStepResponse(t,pos,pos_ref,yaw_ref);
     /* POSITION CONTROLLER */
     // proportional position error
     pos_p_error = pos_ref - pos;
