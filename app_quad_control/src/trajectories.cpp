@@ -93,8 +93,8 @@ void staticDataCollection(float t, Eigen::Vector3f &pos,
                           Eigen::Vector3f &pos_ref, float &yaw_ref)
 {
     // constants
-    const float h_0 = 1.2;                    // height before step [m]
-    const float h_1 = 0.1;                    // height after step [m]
+    const float h_0 = 0.9;                    // height before step [m]
+    const float h_1 = 0.05;                    // height after step [m]
     const float h_step = 0.05;                // step size [m]
     const float t_step = 5;                   // time for a step [s]
     const int n_steps = (h_0 - h_1) / h_step; // number of steps []
@@ -201,7 +201,7 @@ void verticalSpeedDataCollection(float t, Eigen::Vector3f &pos,
         pos_ref(1) = x;
         pos_ref(2) = y;
         yaw_ref = 0.0;
-        int i = (t - 20.0) / T_seq;
+        int i = (t - 70.0) / T_seq;
 
         switch (i)
         {

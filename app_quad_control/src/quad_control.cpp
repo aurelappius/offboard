@@ -47,7 +47,7 @@ int main(int argc, char **argv)
 
   /* INITIALIZE LOGGING */
   std::ofstream myLog;
-  std::string Name = "temp";
+  std::string Name = "STATIC_DATA";
   myLog.open("log/" + Name + ".csv");
   std::cout << "Started logging to log/" << Name << ".csv\n";
 
@@ -170,15 +170,16 @@ int main(int argc, char **argv)
     // debug console outstream
     // std::cout << "x: " << pos(0) << "\ty: " << pos(1) << "\tz: " << pos(2)
     //           << "\tvx: " << vel(0) << "\tvy: " << vel(1) << "\tvz: " <<
-    //           vel(2)
+     //          vel(2)
     //           << std::endl;
 
     /* TRAJECTORY GENERATION */
-    stepResponse(t, pos, pos_ref, yaw_ref);
-
+    //stepResponse(t, pos, pos_ref, yaw_ref);
+verticalSpeedDataCollection(t,pos,pos_ref,yaw_ref);
     /* POSITION CONTROLLER */
     // proportional position error
     pos_p_error = pos_ref - pos;
+//std::cout<<"pos:"<<pos_p_error<<std::endl;
     // desired velocity
     vel_ref(0) = params::P_pos_XY * pos_p_error(0);
     vel_ref(1) = params::P_pos_XY * pos_p_error(1);
@@ -213,6 +214,7 @@ int main(int argc, char **argv)
     /* VELOCITY CONTROLLER */
     // last proportional velocity error
     vel_p_error_last = vel_p_error;
+//std::cout<<"vel:"<<vel_p_error<<std::endl;
     // proportional velocity error
     vel_p_error = vel_ref - vel;
     // integrative velocity error
@@ -233,7 +235,8 @@ int main(int argc, char **argv)
     /* CONVERSION TO ANGLES AND THRUST */
     // add gravitational acceleration
     acc_ref(2) = acc_ref(2); // - params::g;
-    // y-vector of global coordinte system turned around yaw_ref
+   //std::cout<<"acc:"<<acc_ref(2)<<std::endl;
+ // y-vector of global coordinte system turned around yaw_ref
     Eigen::Vector3f y_c(-std::sin(yaw_ref), std::cos(yaw_ref), 0);
 
     // find reference body frame. For more info see:
@@ -285,8 +288,8 @@ int main(int argc, char **argv)
     att_cmd.pitch_deg = -euler_ref(1) * (180.0 / M_PI);
     att_cmd.yaw_deg = -euler_ref(2) * (180.0 / M_PI);
     att_cmd.thrust_value = throttle_ref;
-    std::cout << thrust_ref << std::endl;
-    std::cout << throttle_ref << std::endl;
+   // std::cout << thrust_ref << std::endl;
+   // std::cout << throttle_ref << std::endl;
     offboard.set_attitude(att_cmd);
 
     /* LOGGING*/
@@ -301,11 +304,11 @@ int main(int argc, char **argv)
     // }
 
     // t, x, y, z, vx, vy, vz, roll, pitch, yaw, vroll, vpitch, vyaw, ctrls
-    if (t > 20 && t <= 55)
-    { //(t > params::T_log) { // possibility to wait for
+   // if (t > 20 && t <= 55)
+   // { //(t > params::T_log) { // possibility to wait for
       // transients to fade away
-      if (telemetry.actuator_control_target().controls.size() != 0)
-      {
+     // if (telemetry.actuator_control_target().controls.size() != 0)
+     // {
         myLog << t << ","
               << telemetry.position_velocity_ned().position.north_m << ","
               << telemetry.position_velocity_ned().position.east_m << ","
@@ -319,10 +322,10 @@ int main(int argc, char **argv)
               << telemetry.attitude_angular_velocity_body().roll_rad_s << ","
               << telemetry.attitude_angular_velocity_body().pitch_rad_s << ","
               << telemetry.attitude_angular_velocity_body().yaw_rad_s << ","
-              << telemetry.actuator_control_target().controls.at(0) << ","
-              << telemetry.actuator_control_target().controls.at(1) << ","
-              << telemetry.actuator_control_target().controls.at(2) << ","
-              << telemetry.actuator_control_target().controls.at(3) << ","
+            //  << telemetry.actuator_control_target().controls.at(0) << ","
+             // << telemetry.actuator_control_target().controls.at(1) << ","
+            //  << telemetry.actuator_control_target().controls.at(2) << ","
+            //  << telemetry.actuator_control_target().controls.at(3) << ","
               << rpm[0] << ","
               << rpm[1] << ","
               << rpm[2] << ","
@@ -335,8 +338,8 @@ int main(int argc, char **argv)
               << current[1] << ","
               << current[2] << ","
               << current[3] << "\n";
-      }
-    }
+     // }
+   // }
 
     /* SLEEP */
     sleep_for(milliseconds(params::T_s)); // 50Hz
