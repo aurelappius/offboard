@@ -33,17 +33,17 @@ std::function<void(const mavlink_message_t &)> MotorSpeedCallback =
   mavlink_msg_esc_status_get_voltage(&raw_msg, &voltage[0]);
   mavlink_msg_esc_status_get_current(&raw_msg, &current[0]);
 
-  for (int i = 0; i < 4; i++)
-  {
-    std::cout << "m " << i + 1 << ": rpm: \t" << rpm[i] << "\t volt: \t" << voltage[i] << "\t amps: \t" << current[i] << std::endl;
-  }
+  // for (int i = 0; i < 4; i++)
+  // {
+  //   std::cout << "m " << i + 1 << ": rpm: \t" << rpm[i] << "\t volt: \t" << voltage[i] << "\t amps: \t" << current[i] << std::endl;
+  // }
 };
 
 int main(int argc, char **argv)
 {
 
   /* LOAD YAML PARAMETERS */
-  set_parameters("app/parameters/params.yaml");
+  set_parameters("app_quad_control/parameters/params.yaml");
 
   /* INITIALIZE LOGGING */
   std::ofstream myLog;
@@ -232,8 +232,7 @@ int main(int argc, char **argv)
 
     /* CONVERSION TO ANGLES AND THRUST */
     // add gravitational acceleration
-    acc_ref(2) = acc_ref(2) - params::g;
-
+    acc_ref(2) = acc_ref(2); // - params::g;
     // y-vector of global coordinte system turned around yaw_ref
     Eigen::Vector3f y_c(-std::sin(yaw_ref), std::cos(yaw_ref), 0);
 
@@ -255,11 +254,14 @@ int main(int argc, char **argv)
 
     // project thurst onto body frame z-axis
     float acc_proj_z_b = acc_ref.dot(body_frame.col(2));
+
     float thrust_ref = (acc_proj_z_b)*params::quadcopter_mass; // F=M*a
-    if (t > 15)
-    {
-      thrust_ref = NobahariCompensator(thrust_ref, pos(2)); // GE compensator
-    }
+
+    // if (t > 15)
+    // {
+    //   thrust_ref = NobahariCompensator(thrust_ref, pos(2)); // GE compensator
+    // }
+
     float throttle_ref = thrust_to_throttle(thrust_ref);
     // std::cout<<throttle_ref<<std::endl;
     /* COMMANDS TO PX4 */
@@ -283,7 +285,8 @@ int main(int argc, char **argv)
     att_cmd.pitch_deg = -euler_ref(1) * (180.0 / M_PI);
     att_cmd.yaw_deg = -euler_ref(2) * (180.0 / M_PI);
     att_cmd.thrust_value = throttle_ref;
-    att_cmd.thrust_value = 0.2 + 0.5 * sin(0.1 * t); // for rpm measurment testing
+    std::cout << thrust_ref << std::endl;
+    std::cout << throttle_ref << std::endl;
     offboard.set_attitude(att_cmd);
 
     /* LOGGING*/
