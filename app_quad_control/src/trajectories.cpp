@@ -84,7 +84,51 @@ void circleStepResponse(float t, Eigen::Vector3f &pos,
 void oscillations(float t, Eigen::Vector3f &pos,
                   Eigen::Vector3f &pos_ref, float &yaw_ref)
 {
-    // TODO
+    const float offset = 1.25; // vertical offset from IGE to OGE [m]
+    const float T_seq = 5;     // time for a certain altitude command [s]
+    const float x = 0.5;       // x-coordinate [m]
+    const float y = 0.5;       // y-coordinate [m]
+    const float h_0 = 0.4;     // heihgt [m]
+    const float amp = 0.35;    // amplitude [m]
+    const float freq = 0.3;    // frequency [1_s]
+
+    // Taking off
+    if (t > 0 && t <= 20)
+    {
+        std::cout << "taking off" << std::endl;
+        pos_ref(0) = x;
+        pos_ref(1) = y;
+        pos_ref(2) = 1.5;
+        yaw_ref = 0.0;
+    }
+    // flying in High altitude (OGE)
+    if (t > 20 && t < 70)
+    {
+        pos_ref(0) = x;
+        pos_ref(1) = y;
+        pos_ref(2) = h_0 + amp * std::sin(freq * (t - 20) * (2 * M_PI)) + offset;
+        yaw_ref = 0.0;
+        int i = (t - 20.0) / T_seq;
+    }
+    // flying in Low altitude (IGE)
+    if (t > 70 && t < 120)
+    {
+        pos_ref(0) = x;
+        pos_ref(1) = y;
+
+        pos_ref(2) = h_0 + amp * std::sin(freq * (t - 70) * (2 * M_PI));
+        yaw_ref = 0.0;
+        int i = (t - 70.0) / T_seq;
+    }
+
+    if (t > 120)
+    {
+        std::cout << "landing now" << std::endl;
+        pos_ref(0) = x;
+        pos_ref(1) = y;
+        pos_ref(2) = 0.0;
+        yaw_ref = 0.0;
+    }
 }
 
 /* DATA COLLECTION TRAJECTORIES */
@@ -94,7 +138,7 @@ void staticDataCollection(float t, Eigen::Vector3f &pos,
 {
     // constants
     const float h_0 = 0.9;                    // height before step [m]
-    const float h_1 = 0.05;                    // height after step [m]
+    const float h_1 = 0.05;                   // height after step [m]
     const float h_step = 0.05;                // step size [m]
     const float t_step = 5;                   // time for a step [s]
     const int n_steps = (h_0 - h_1) / h_step; // number of steps []
@@ -168,8 +212,8 @@ void verticalSpeedDataCollection(float t, Eigen::Vector3f &pos,
     // flying in Low altitude (IGE)
     if (t > 20 && t < 70)
     {
-        pos_ref(1) = x;
-        pos_ref(2) = y;
+        pos_ref(0) = x;
+        pos_ref(1) = y;
         yaw_ref = 0.0;
         int i = (t - 20.0) / T_seq;
 
@@ -198,8 +242,8 @@ void verticalSpeedDataCollection(float t, Eigen::Vector3f &pos,
     // flying in Low altitude (IGE)
     if (t > 70 && t < 120)
     {
-        pos_ref(1) = x;
-        pos_ref(2) = y;
+        pos_ref(0) = x;
+        pos_ref(1) = y;
         yaw_ref = 0.0;
         int i = (t - 70.0) / T_seq;
 

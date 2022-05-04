@@ -1,7 +1,7 @@
 #pragma once
 #include <Eigen/Dense>
 #include <iostream>
-
+#include <cmath>
 /* BENCHMARK TRAJECTORIES */
 // vertical step response from 1.20 m to 0.20 m
 void stepResponse(float t, Eigen::Vector3f &pos,
