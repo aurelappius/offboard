@@ -11,6 +11,10 @@ void stepResponse(float t, Eigen::Vector3f &pos,
 void circleStepResponse(float t, Eigen::Vector3f &pos,
                         Eigen::Vector3f &pos_ref, float &yaw_ref);
 
+// test the vertical speed controller
+void verticalSpeedController(float t, Eigen::Vector3f &pos,
+                             Eigen::Vector3f &pos_ref, float &yaw_ref);
+
 // oscillations
 void oscillations(float t, Eigen::Vector3f &pos,
                   Eigen::Vector3f &pos_ref, float &yaw_ref);
