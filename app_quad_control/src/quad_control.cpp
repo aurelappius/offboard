@@ -174,16 +174,20 @@ int main(int argc, char **argv)
     //           << std::endl;
 
     /* TRAJECTORY GENERATION */
-    // stepResponse(t, pos, pos_ref, yaw_ref);
-    verticalSpeedController(t, pos, pos_ref, yaw_ref);
+    // insert postion trajectory generator here
+    // verticalSpeedController(t, pos, pos_ref, yaw_ref);
+
     /* POSITION CONTROLLER */
     // proportional position error
     pos_p_error = pos_ref - pos;
-    // std::cout<<"pos:"<<pos_p_error<<std::endl;
+
     //  desired velocity
     vel_ref(0) = params::P_pos_XY * pos_p_error(0);
     vel_ref(1) = params::P_pos_XY * pos_p_error(1);
     vel_ref(2) = params::P_pos_Z * pos_p_error(2); // different gain for Z-error
+
+    // insert velocity trajectory generator here
+    velocityControl(t, pos, pos_ref, yaw_ref, vel_ref);
 
     // check maximum velocities and constrain.
     if (vel_ref(0) > params::max_vel_XY)

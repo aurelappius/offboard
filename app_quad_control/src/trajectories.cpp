@@ -320,3 +320,60 @@ void allSpeedDataCollection(float t, Eigen::Vector3f &pos,
 {
     // TODO
 }
+
+// velocity control
+void velocityControl(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref)
+{
+    const float fwd_speed = 0.3;
+    // Taking off
+    if (t > 0 && t <= 20)
+    {
+        std::cout << "taking off" << std::endl;
+        pos_ref(0) = -1.5;
+        pos_ref(1) = 0;
+        pos_ref(2) = 1.5;
+        yaw_ref = 0.0;
+
+        // proportional position error
+        Eigen::Vector3f pos_p_error = pos_ref - pos;
+
+        //  desired velocity
+        vel_ref(0) = 0.95 * pos_p_error(0);
+        vel_ref(1) = 0.95 * pos_p_error(1);
+        vel_ref(2) = 0.95 * pos_p_error(2); // different gain for Z-error
+    }
+
+    // Flying across field
+    if (t > 20 && t <= 40)
+    {
+        std::cout << "taking off" << std::endl;
+        pos_ref(1) = 0;
+        pos_ref(2) = 1.5;
+        yaw_ref = 0.0;
+
+        // proportional position error
+        Eigen::Vector3f pos_p_error = pos_ref - pos;
+
+        //  desired velocity
+        vel_ref(1) = 0.95 * pos_p_error(1);
+        vel_ref(2) = 0.95 * pos_p_error(2); // different gain for Z-error
+
+        if (pos(0) >= 2.1)
+        {
+            pos_ref(0) = 2;
+            vel_ref(0) = 0.95 * (pos_ref(0) - pos(0));
+        }
+        else
+        {
+            vel_ref(0) = fwd_speed;
+        }
+    }
+    if (t > 40)
+    {
+        std::cout << "landing now" << std::endl;
+        pos_ref(0) = 2.0;
+        pos_ref(1) = 0.0;
+        pos_ref(2) = 0.0;
+        yaw_ref = 0.0;
+    }
+}
