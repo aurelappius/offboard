@@ -381,15 +381,15 @@ void velocityControl(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, fl
 // velocity control
 void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref, float v)
 {
-    const float h_0 = 1.25;
-    const float h_1 = 0.25;
-    const float step_location = 0.75;
+    const float h_0 = 1.10;
+    const float h_1 = 0.10;
+    const float step_location = -1.0;
     // Taking off
     if (t > 0 && t <= 20)
     {
         std::cout << "taking off" << std::endl;
-        pos_ref(0) = -1.5;
-        pos_ref(1) = 0;
+        pos_ref(0) = -2.0;
+        pos_ref(1) = 1.0;
         pos_ref(2) = h_0;
         yaw_ref = 0.0;
 
@@ -407,7 +407,7 @@ void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_re
     if (t > 20 && t <= 30)
     {
         std::cout << "first step" << std::endl;
-        pos_ref(1) = 0;
+        pos_ref(1) = 1.0;
         yaw_ref = 0.0;
 
         // height
@@ -427,7 +427,7 @@ void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_re
         // speed
         if (pos(0) >= 2)
         {
-            pos_ref(0) = 2.2;
+            pos_ref(0) = 2.6;
             vel_ref(0) = 0.95 * (pos_ref(0) - pos(0));
         }
         else
@@ -437,8 +437,8 @@ void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_re
     }
     if (t > 30 && t <= 35)
     {
-        pos_ref(0) = -1.5;
-        pos_ref(1) = 0;
+        pos_ref(0) = -2.0;
+        pos_ref(1) = 1.0;
         pos_ref(2) = h_0;
         yaw_ref = 0.0;
     }
@@ -446,7 +446,7 @@ void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_re
     if (t > 35 && t <= 45)
     {
         std::cout << "second step" << std::endl;
-        pos_ref(1) = 0;
+        pos_ref(1) = 1.0;
         yaw_ref = 0.0;
 
         // height
@@ -466,7 +466,7 @@ void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_re
         // speed
         if (pos(0) >= 2)
         {
-            pos_ref(0) = 2.2;
+            pos_ref(0) = 2.6;
             vel_ref(0) = 0.95 * (pos_ref(0) - pos(0));
         }
         else
@@ -476,8 +476,8 @@ void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_re
     }
     if (t > 45 && t <= 50)
     {
-        pos_ref(0) = -1.5;
-        pos_ref(1) = 0;
+        pos_ref(0) = -2.0;
+        pos_ref(1) = 1.0;
         pos_ref(2) = h_0;
         yaw_ref = 0.0;
     }
@@ -485,7 +485,7 @@ void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_re
     if (t > 50 && t <= 60)
     {
         std::cout << "third step" << std::endl;
-        pos_ref(1) = 0;
+        pos_ref(1) = 1.0;
         yaw_ref = 0.0;
 
         // height
@@ -505,7 +505,7 @@ void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_re
         // speed
         if (pos(0) >= 2)
         {
-            pos_ref(0) = 2.2;
+            pos_ref(0) = 2.6;
             vel_ref(0) = 0.95 * (pos_ref(0) - pos(0));
         }
         else
@@ -515,8 +515,8 @@ void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_re
     }
     if (t > 60 && t <= 65)
     {
-        pos_ref(0) = -1.5;
-        pos_ref(1) = 0;
+        pos_ref(0) = -2.0;
+        pos_ref(1) = 1.0;
         pos_ref(2) = h_0;
         yaw_ref = 0.0;
     }
@@ -524,8 +524,8 @@ void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_re
     if (t > 65)
     {
         std::cout << "landing now" << std::endl;
-        pos_ref(0) = 2.0;
-        pos_ref(1) = 0.0;
+        pos_ref(0) = -2.0;
+        pos_ref(1) = 1.0;
         pos_ref(2) = 0.0;
         yaw_ref = 0.0;
     }
