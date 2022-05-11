@@ -534,11 +534,11 @@ void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_re
 // velocity data collection
 void velocityDataCollection(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref)
 {
-    const float h[] = {1, 0.5, 0.4, 0.3, 0.2};
-    const float v[] = {1.25, 2.25, 3.25, 4.25};
-    const float x_min = -2.5;
-    const float x_max = 3;
-    const float y = 0.5;
+    const float h[] = {1, 0.5, 0.4, 0.3, 0.2,0.1};
+    const float v[] = {0.5, 1.25, 2.0, 2.75};
+    const float x_min = -1.5;
+    const float x_max = 1.5;
+    const float y = 1.0;
 
     // Taking off
     if (t > 0 && t <= 20)
@@ -559,23 +559,23 @@ void velocityDataCollection(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_
     }
 
     // collect Data
-    if (t > 20 && t <= 20 + 5 * 40)
+    if (t > 20 && t <= 20 + 6 * 60)
     {
-        int j = int(t - 20) / 40;          // iterate trought heights
-        int i = int(t - 20 - j * 40) / 10; // iterate trought speeds
+        int j = int(t - 20) / 60;          // iterate trought heights
+        int i = int(t - 20 - j * 60) / 15; // iterate trought speeds
 
         std::cout << "j: " << j << "\t height: " << h[j] << "\t i: " << i << "\t speed: " << v[i] << std::endl;
-        if (t > 10 * i + 40 * j + 20 && t <= 10 * i + 40 * j + 25)
+        if (t > 15 * i + 60 * j + 20 && t <= 15 * i + 60 * j + 27.5)
         {
             flyfwd(x_max, h[j], y, v[i], pos, pos_ref, yaw_ref, vel_ref);
         }
-        if (t > 10 * i + 40 * j + 25 && t <= 10 * i + 40 * j + 30)
+        if (t > 15 * i + 60 * j + 27.5 && t <= 15 * i + 60 * j + 35)
         {
             flybwd(x_min, h[j], y, v[i], pos, pos_ref, yaw_ref, vel_ref);
         }
     }
 
-    if (t > 20 + 5 * 40)
+    if (t > 20 + 6 * 60)
     {
         std::cout << "landing now" << std::endl;
         pos_ref(0) = 2.0;
@@ -599,7 +599,7 @@ void flyfwd(float x_max, float height, float y, float speed, Eigen::Vector3f &po
     // speed
     if (pos(0) >= x_max)
     {
-        pos_ref(0) = x_max + 0.2;
+        pos_ref(0) = x_max + 0.6;
         vel_ref(0) = 0.95 * (pos_ref(0) - pos(0));
     }
     else
@@ -620,7 +620,7 @@ void flybwd(float x_min, float height, float y, float speed, Eigen::Vector3f &po
     // speed
     if (pos(0) <= x_min)
     {
-        pos_ref(0) = x_min - 0.2;
+        pos_ref(0) = x_min - 0.6;
         vel_ref(0) = 0.95 * (pos_ref(0) - pos(0));
     }
     else

@@ -47,7 +47,7 @@ int main(int argc, char **argv)
 
   /* INITIALIZE LOGGING */
   std::ofstream myLog;
-  std::string Name = "STATIC_DATA";
+  std::string Name = "DYN_DATA";
   myLog.open("log/" + Name + ".csv");
   std::cout << "Started logging to log/" << Name << ".csv\n";
 
