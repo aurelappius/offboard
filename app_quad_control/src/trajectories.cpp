@@ -403,9 +403,10 @@ void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_re
     }
 
     // Flying across field
-    if (t > 20 && t <= 40)
+    // first step
+    if (t > 20 && t <= 30)
     {
-        std::cout << "taking off" << std::endl;
+        std::cout << "first step" << std::endl;
         pos_ref(1) = 0;
         yaw_ref = 0.0;
 
@@ -434,7 +435,93 @@ void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_re
             vel_ref(0) = v;
         }
     }
-    if (t > 40)
+    if (t > 30 && t <= 35)
+    {
+        pos_ref(0) = -1.5;
+        pos_ref(1) = 0;
+        pos_ref(2) = h_0;
+        yaw_ref = 0.0;
+    }
+    // second step
+    if (t > 35 && t <= 45)
+    {
+        std::cout << "second step" << std::endl;
+        pos_ref(1) = 0;
+        yaw_ref = 0.0;
+
+        // height
+        if (pos(0) >= step_location)
+        {
+            pos_ref(2) = h_1;
+        }
+        else
+        {
+            pos_ref(2) = h_0;
+        }
+
+        //  desired velocity
+        vel_ref(1) = 0.95 * (pos_ref(1) - pos(1));
+        vel_ref(2) = 0.95 * (pos_ref(2) - pos(2)); // different gain for Z-error
+
+        // speed
+        if (pos(0) >= 2)
+        {
+            pos_ref(0) = 2.2;
+            vel_ref(0) = 0.95 * (pos_ref(0) - pos(0));
+        }
+        else
+        {
+            vel_ref(0) = v;
+        }
+    }
+    if (t > 45 && t <= 50)
+    {
+        pos_ref(0) = -1.5;
+        pos_ref(1) = 0;
+        pos_ref(2) = h_0;
+        yaw_ref = 0.0;
+    }
+    // third step
+    if (t > 50 && t <= 60)
+    {
+        std::cout << "third step" << std::endl;
+        pos_ref(1) = 0;
+        yaw_ref = 0.0;
+
+        // height
+        if (pos(0) >= step_location)
+        {
+            pos_ref(2) = h_1;
+        }
+        else
+        {
+            pos_ref(2) = h_0;
+        }
+
+        //  desired velocity
+        vel_ref(1) = 0.95 * (pos_ref(1) - pos(1));
+        vel_ref(2) = 0.95 * (pos_ref(2) - pos(2)); // different gain for Z-error
+
+        // speed
+        if (pos(0) >= 2)
+        {
+            pos_ref(0) = 2.2;
+            vel_ref(0) = 0.95 * (pos_ref(0) - pos(0));
+        }
+        else
+        {
+            vel_ref(0) = v;
+        }
+    }
+    if (t > 60 && t <= 65)
+    {
+        pos_ref(0) = -1.5;
+        pos_ref(1) = 0;
+        pos_ref(2) = h_0;
+        yaw_ref = 0.0;
+    }
+
+    if (t > 65)
     {
         std::cout << "landing now" << std::endl;
         pos_ref(0) = 2.0;
