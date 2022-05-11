@@ -377,3 +377,167 @@ void velocityControl(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, fl
         yaw_ref = 0.0;
     }
 }
+
+// velocity control
+void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref, float v)
+{
+    const float h_0 = 1.25;
+    const float h_1 = 0.25;
+    const float step_location = 0.75;
+    // Taking off
+    if (t > 0 && t <= 20)
+    {
+        std::cout << "taking off" << std::endl;
+        pos_ref(0) = -1.5;
+        pos_ref(1) = 0;
+        pos_ref(2) = h_0;
+        yaw_ref = 0.0;
+
+        // proportional position error
+        Eigen::Vector3f pos_p_error = pos_ref - pos;
+
+        //  desired velocity
+        vel_ref(0) = 0.95 * pos_p_error(0);
+        vel_ref(1) = 0.95 * pos_p_error(1);
+        vel_ref(2) = 0.95 * pos_p_error(2); // different gain for Z-error
+    }
+
+    // Flying across field
+    if (t > 20 && t <= 40)
+    {
+        std::cout << "taking off" << std::endl;
+        pos_ref(1) = 0;
+        yaw_ref = 0.0;
+
+        // height
+        if (pos(0) >= step_location)
+        {
+            pos_ref(2) = h_1;
+        }
+        else
+        {
+            pos_ref(2) = h_0;
+        }
+
+        //  desired velocity
+        vel_ref(1) = 0.95 * (pos_ref(1) - pos(1));
+        vel_ref(2) = 0.95 * (pos_ref(2) - pos(2)); // different gain for Z-error
+
+        // speed
+        if (pos(0) >= 2)
+        {
+            pos_ref(0) = 2.2;
+            vel_ref(0) = 0.95 * (pos_ref(0) - pos(0));
+        }
+        else
+        {
+            vel_ref(0) = v;
+        }
+    }
+    if (t > 40)
+    {
+        std::cout << "landing now" << std::endl;
+        pos_ref(0) = 2.0;
+        pos_ref(1) = 0.0;
+        pos_ref(2) = 0.0;
+        yaw_ref = 0.0;
+    }
+}
+
+// velocity data collection
+void velocityDataCollection(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref)
+{
+    const float h[] = {1, 0.5, 0.4, 0.3, 0.2};
+    const float v[] = {0.5, 1, 2, 3};
+    const float x_min = -1.5;
+    const float x_max = 2.5;
+    const float y = 0.5;
+
+    // Taking off
+    if (t > 0 && t <= 20)
+    {
+        std::cout << "taking off" << std::endl;
+        pos_ref(0) = x_min;
+        pos_ref(1) = y;
+        pos_ref(2) = h[0];
+        yaw_ref = 0.0;
+
+        // proportional position error
+        Eigen::Vector3f pos_p_error = pos_ref - pos;
+
+        //  desired velocity
+        vel_ref(0) = 0.95 * pos_p_error(0);
+        vel_ref(1) = 0.95 * pos_p_error(1);
+        vel_ref(2) = 0.95 * pos_p_error(2); // different gain for Z-error
+    }
+
+    // collect Data
+    if (t > 20 && t <= 20 + 5 * 40)
+    {
+        int j = int(t - 20) / 40;          // iterate trought heights
+        int i = int(t - 20 - j * 40) / 10; // iterate trought speeds
+
+        std::cout << "j: " << j << "\t height: " << h[j] << "\t i: " << i << "\t speed: " << v[i] << std::endl;
+        if (t > 10 * i + 40 * j + 20 && t <= 10 * i + 40 * j + 25)
+        {
+            flyfwd(x_max, h[j], y, v[i], pos, pos_ref, yaw_ref, vel_ref);
+        }
+        if (t > 10 * i + 40 * j + 25 && t <= 10 * i + 40 * j + 30)
+        {
+            flybwd(x_min, h[j], y, v[i], pos, pos_ref, yaw_ref, vel_ref);
+        }
+    }
+
+    if (t > 20 + 5 * 40)
+    {
+        std::cout << "landing now" << std::endl;
+        pos_ref(0) = 2.0;
+        pos_ref(1) = 0.0;
+        pos_ref(2) = 0.0;
+        yaw_ref = 0.0;
+    }
+}
+
+// helper functions
+void flyfwd(float x_max, float height, float y, float speed, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref)
+{
+    pos_ref(1) = y;
+    pos_ref(2) = height;
+    yaw_ref = 0.0;
+
+    //  desired velocity
+    vel_ref(1) = 0.95 * (pos_ref(1) - pos(1));
+    vel_ref(2) = 0.95 * (pos_ref(2) - pos(2)); // different gain for Z-error
+
+    // speed
+    if (pos(0) >= x_max)
+    {
+        pos_ref(0) = x_max + 0.2;
+        vel_ref(0) = 0.95 * (pos_ref(0) - pos(0));
+    }
+    else
+    {
+        vel_ref(0) = speed;
+    }
+}
+void flybwd(float x_min, float height, float y, float speed, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref)
+{
+    pos_ref(1) = y;
+    pos_ref(2) = height;
+    yaw_ref = 0.0;
+
+    //  desired velocity
+    vel_ref(1) = 0.95 * (pos_ref(1) - pos(1));
+    vel_ref(2) = 0.95 * (pos_ref(2) - pos(2)); // different gain for Z-error
+
+    // speed
+    if (pos(0) <= x_min)
+    {
+        pos_ref(0) = x_min - 0.2;
+        vel_ref(0) = 0.95 * (pos_ref(0) - pos(0));
+    }
+    else
+    {
+        vel_ref(0) = -speed;
+    }
+}

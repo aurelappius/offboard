@@ -36,3 +36,22 @@ float AppiusStaticCompensator(float thrust_ref, float z)
 {
     return thrust_ref / (0.11413538 * std::exp(-5.38792044 * z) + 1.0275278);
 }
+
+// Appius Dynamic Compensator
+float AppiusDynamicCompensator(float thrust_ref, float z)
+{
+    // TODO
+    return 0;
+}
+
+float CheesemanDynamicCompensator(float thrust_ref, float z, float v)
+{
+    const float v_h = std::sqrt(T_h / (2 * rho_air * M_PI * quad_rotor_radius));
+    return thrust_ref * (1.0 - (std::pow((quad_rotor_radius / (4 * z)), 2) / (1 + (std::pow((v / v_h), 2)))));
+}
+// Sanchez compensator with forward_speed
+float KanDynamicCompensator(float thrust_ref, float z, float v)
+{
+    const float v_h = std::sqrt(T_h / (2 * rho_air * M_PI * quad_rotor_radius));
+    return thrust_ref * ((1 + (50 / 3) * std::pow((v / v_h), 3)) / (1 - ((3 * quad_rotor_radius) / (25 * z))));
+}

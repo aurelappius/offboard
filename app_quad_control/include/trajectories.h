@@ -17,6 +17,7 @@ void oscillations(float t, Eigen::Vector3f &pos,
 
 // velocity control
 void velocityControl(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref);
+void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref, float v);
 
 /* DATA COLLECTION TRAJECTORIES */
 // quasi static flying for simple GE Model
@@ -28,5 +29,8 @@ void verticalSpeedDataCollection(float t, Eigen::Vector3f &pos,
                                  Eigen::Vector3f &pos_ref, float &yaw_ref);
 
 // omnidirectional flying for most advanced GE Model
-void allSpeedDataCollection(float t, Eigen::Vector3f &pos,
-                            Eigen::Vector3f &pos_ref, float &yaw_ref);
+void velocityDataCollection(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref);
+
+// helper functions for velocityDataCollection()
+void flyfwd(float x_max, float height, float y, float speed, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref);
+void flybwd(float x_min, float height, float y, float speed, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref);
