@@ -535,9 +535,9 @@ void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_re
 void velocityDataCollection(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref)
 {
     const float h[] = {1, 0.5, 0.4, 0.3, 0.2};
-    const float v[] = {0.5, 1, 2, 3};
-    const float x_min = -1.5;
-    const float x_max = 2.5;
+    const float v[] = {1.25, 2.25, 3.25, 4.25};
+    const float x_min = -2.5;
+    const float x_max = 3;
     const float y = 0.5;
 
     // Taking off
