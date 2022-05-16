@@ -34,3 +34,6 @@ void velocityDataCollection(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_
 // helper functions for velocityDataCollection()
 void flyfwd(float x_max, float height, float y, float speed, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref);
 void flybwd(float x_min, float height, float y, float speed, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref);
+
+// swoop test
+void swoop(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref, float v);

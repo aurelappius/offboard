@@ -187,8 +187,8 @@ int main(int argc, char **argv)
     vel_ref(2) = params::P_pos_Z * pos_p_error(2); // different gain for Z-error
 
     // insert velocity trajectory generator here
-    velocityStepResponse(t, pos, pos_ref, yaw_ref, vel_ref,0.5);
-
+    // velocityStepResponse(t, pos, pos_ref, yaw_ref, vel_ref,0.5);
+    swoop(t, pos, pos_ref, yaw_ref, vel_ref, 1);
     // check maximum velocities and constrain.
     if (vel_ref(0) > params::max_vel_XY)
     {
@@ -265,9 +265,9 @@ int main(int argc, char **argv)
     float thrust_ref = (acc_proj_z_b)*params::quadcopter_mass; // F=M*a
 
     if (t > 15)
-     {
-       thrust_ref =CheesemanDynamicCompensator(thrust_ref, pos(2),vel(0)); // GE compensator
-     }
+    {
+      thrust_ref = CheesemanDynamicCompensator(thrust_ref, pos(2), vel(0)); // GE compensator
+    }
 
     float throttle_ref = thrust_to_throttle(thrust_ref);
     // std::cout<<throttle_ref<<std::endl;

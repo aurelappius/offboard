@@ -534,7 +534,7 @@ void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_re
 // velocity data collection
 void velocityDataCollection(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref)
 {
-    const float h[] = {1, 0.5, 0.4, 0.3, 0.2,0.1};
+    const float h[] = {1, 0.5, 0.4, 0.3, 0.2, 0.1};
     const float v[] = {0.5, 1.25, 2.0, 2.75};
     const float x_min = -1.5;
     const float x_max = 1.5;
@@ -626,5 +626,157 @@ void flybwd(float x_min, float height, float y, float speed, Eigen::Vector3f &po
     else
     {
         vel_ref(0) = -speed;
+    }
+}
+
+void swoop(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref, float v)
+{
+    const float h_0 = 1.2; // height before step [m]
+    const float h_1 = 0.1; // height after step [m]
+    const float l = 1.5;
+    const float x = 0.0;
+    const float y = 1.0;
+    if (t > 0 && t <= 20)
+    { // takeoff
+        pos_ref(0) = x - l;
+        pos_ref(1) = y;
+        pos_ref(2) = h_0;
+        yaw_ref = 0.0;
+
+        // proportional position error
+        Eigen::Vector3f pos_p_error = pos_ref - pos;
+
+        //  desired velocity
+        vel_ref(0) = 0.95 * pos_p_error(0);
+        vel_ref(1) = 0.95 * pos_p_error(1);
+        vel_ref(2) = 0.95 * pos_p_error(2); // different gain for Z-error
+    }
+
+    // swoop across field
+    // first step
+    if (t > 20 && t <= 30)
+    {
+        std::cout << "first swoop" << std::endl;
+        pos_ref(1) = y;
+        yaw_ref = 0.0;
+
+        // height
+        if (pos(0) >= x)
+        {
+            pos_ref(2) = h_0;
+        }
+        else
+        {
+            pos_ref(2) = h_1;
+        }
+
+        //  desired velocity
+        vel_ref(1) = 0.95 * (pos_ref(1) - pos(1));
+        vel_ref(2) = 0.95 * (pos_ref(2) - pos(2)); // different gain for Z-error
+
+        // speed
+        if (pos(0) >= x + l)
+        {
+            pos_ref(0) = x + l + 0.6;
+            vel_ref(0) = 0.95 * (pos_ref(0) - pos(0));
+        }
+        else
+        {
+            vel_ref(0) = v;
+        }
+    }
+    if (t > 35 && t <= 45) // fly back to start
+    {
+        pos_ref(0) = x - l;
+        pos_ref(1) = y;
+        pos_ref(2) = h_0;
+        yaw_ref = 0.0;
+    }
+    // second step
+    if (t > 20 && t <= 30)
+    {
+        std::cout << "first swoop" << std::endl;
+        pos_ref(1) = y;
+        yaw_ref = 0.0;
+
+        // height
+        if (pos(0) >= x)
+        {
+            pos_ref(2) = h_0;
+        }
+        else
+        {
+            pos_ref(2) = h_1;
+        }
+
+        //  desired velocity
+        vel_ref(1) = 0.95 * (pos_ref(1) - pos(1));
+        vel_ref(2) = 0.95 * (pos_ref(2) - pos(2)); // different gain for Z-error
+
+        // speed
+        if (pos(0) >= x + l)
+        {
+            pos_ref(0) = x + l + 0.6;
+            vel_ref(0) = 0.95 * (pos_ref(0) - pos(0));
+        }
+        else
+        {
+            vel_ref(0) = v;
+        }
+    }
+    if (t > 45 && t <= 50) // fly back to start
+    {
+        pos_ref(0) = x - l;
+        pos_ref(1) = y;
+        pos_ref(2) = h_0;
+        yaw_ref = 0.0;
+    }
+    // third step
+    if (t > 50 && t <= 60)
+    {
+        std::cout << "first swoop" << std::endl;
+        pos_ref(1) = y;
+        yaw_ref = 0.0;
+
+        // height
+        if (pos(0) >= x)
+        {
+            pos_ref(2) = h_0;
+        }
+        else
+        {
+            pos_ref(2) = h_1;
+        }
+
+        //  desired velocity
+        vel_ref(1) = 0.95 * (pos_ref(1) - pos(1));
+        vel_ref(2) = 0.95 * (pos_ref(2) - pos(2)); // different gain for Z-error
+
+        // speed
+        if (pos(0) >= x + l)
+        {
+            pos_ref(0) = x + l + 0.6;
+            vel_ref(0) = 0.95 * (pos_ref(0) - pos(0));
+        }
+        else
+        {
+            vel_ref(0) = v;
+        }
+    }
+    if (t > 60 && t <= 65) // fly back to start
+    {
+        pos_ref(0) = x - l;
+        pos_ref(1) = y;
+        pos_ref(2) = h_0;
+        yaw_ref = 0.0;
+    }
+
+    if (t > 65)
+    {
+        std::cout << "landing now" << std::endl;
+        pos_ref(0) = -2.0;
+        pos_ref(1) = 1.0;
+        pos_ref(2) = 0.0;
+        yaw_ref = 0.0;
     }
 }
