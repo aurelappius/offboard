@@ -381,7 +381,7 @@ void velocityControl(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, fl
 // velocity control
 void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref, float v)
 {
-    const float h_0 = 1.10;
+    const float h_0 = 1.20;
     const float h_1 = 0.10;
     const float step_location = -1.0;
     // Taking off
@@ -439,7 +439,8 @@ void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_re
     {
         pos_ref(0) = -2.0;
         pos_ref(1) = 1.0;
-        pos_ref(2) = h_0;
+        False
+            pos_ref(2) = h_0;
         yaw_ref = 0.0;
     }
     // second step
@@ -631,9 +632,11 @@ void flybwd(float x_min, float height, float y, float speed, Eigen::Vector3f &po
 
 void swoop(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref, float v)
 {
-    const float h_0 = 1.3; // height before step [m]
+    const float h_0 = 1.2; // height before step [m]
     const float h_1 = 0.2; // height after step [m]
-    const float l = 1.5;
+    const float l = 2.0;
+    const float x_start = -1.0;
+    const float x_end = 1.0;
     const float x = 0.0;
     const float y = 1.0;
     if (t > 0 && t <= 20)
@@ -661,7 +664,7 @@ void swoop(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_r
         yaw_ref = 0.0;
 
         // height
-        if (pos(0) >= x)
+        if (pos(0) >= x_end && pos(0) <= x_start)
         {
             pos_ref(2) = h_0;
         }
@@ -685,7 +688,7 @@ void swoop(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_r
             vel_ref(0) = v;
         }
     }
-    if (t > 27 && t <= 35) // fly back to start
+    if (t > 27 && t <= 40) // fly back to start
     {
         pos_ref(0) = x - l;
         pos_ref(1) = y;
@@ -693,14 +696,14 @@ void swoop(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_r
         yaw_ref = 0.0;
     }
     // second step
-    if (t > 35 && t <= 42)
+    if (t > 40 && t <= 47)
     {
         std::cout << "2nd swoop" << std::endl;
         pos_ref(1) = y;
         yaw_ref = 0.0;
 
         // height
-        if (pos(0) >= x)
+        if (pos(0) >= x_end && pos(0) <= x_start)
         {
             pos_ref(2) = h_0;
         }
@@ -724,7 +727,7 @@ void swoop(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_r
             vel_ref(0) = v;
         }
     }
-    if (t > 42 && t <= 50) // fly back to start
+    if (t > 47 && t <= 60) // fly back to start
     {
         pos_ref(0) = x - l;
         pos_ref(1) = y;
@@ -732,14 +735,14 @@ void swoop(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_r
         yaw_ref = 0.0;
     }
     // third step
-    if (t > 50 && t <= 57)
+    if (t > 60 && t <= 67)
     {
         std::cout << "third swoop" << std::endl;
         pos_ref(1) = y;
         yaw_ref = 0.0;
 
         // height
-        if (pos(0) >= x)
+        if (pos(0) >= x_end && pos(0) <= x_start)
         {
             pos_ref(2) = h_0;
         }
@@ -763,7 +766,7 @@ void swoop(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_r
             vel_ref(0) = v;
         }
     }
-    if (t > 57 && t <= 65) // fly back to start
+    if (t > 67 && t <= 72) // fly back to start
     {
         pos_ref(0) = x - l;
         pos_ref(1) = y;
@@ -771,7 +774,7 @@ void swoop(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_r
         yaw_ref = 0.0;
     }
 
-    if (t > 65)
+    if (t > 72)
     {
         std::cout << "landing now" << std::endl;
         pos_ref(0) = -2.0;
