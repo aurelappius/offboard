@@ -381,8 +381,8 @@ void velocityControl(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, fl
 // velocity control
 void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref, float v)
 {
-    const float h_0 = 1.20;
-    const float h_1 = 0.10;
+    const float h_0 = 2.20;
+    const float h_1 = 1.10;
     const float step_location = -1.0;
     // Taking off
     if (t > 0 && t <= 20)
