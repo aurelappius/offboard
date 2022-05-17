@@ -439,8 +439,7 @@ void velocityStepResponse(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_re
     {
         pos_ref(0) = -2.0;
         pos_ref(1) = 1.0;
-        False
-            pos_ref(2) = h_0;
+        pos_ref(2) = h_0;
         yaw_ref = 0.0;
     }
     // second step
@@ -632,11 +631,11 @@ void flybwd(float x_min, float height, float y, float speed, Eigen::Vector3f &po
 
 void swoop(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_ref, Eigen::Vector3f &vel_ref, float v)
 {
-    const float h_0 = 1.2; // height before step [m]
-    const float h_1 = 0.2; // height after step [m]
-    const float l = 2.0;
+    const float h_0 = 2.15; // height before step [m]
+    const float h_1 = 1.15; // height after step [m]
+    const float l = 2.5;
     const float x_start = -1.0;
-    const float x_end = 1.0;
+    const float x_end = 1.5;
     const float x = 0.0;
     const float y = 1.0;
     if (t > 0 && t <= 20)
@@ -664,7 +663,7 @@ void swoop(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_r
         yaw_ref = 0.0;
 
         // height
-        if (pos(0) >= x_end && pos(0) <= x_start)
+        if (pos(0) >= x_end ||  pos(0) <= x_start)
         {
             pos_ref(2) = h_0;
         }
@@ -703,7 +702,7 @@ void swoop(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_r
         yaw_ref = 0.0;
 
         // height
-        if (pos(0) >= x_end && pos(0) <= x_start)
+        if (pos(0) >= x_end || pos(0) <= x_start)
         {
             pos_ref(2) = h_0;
         }
@@ -742,7 +741,7 @@ void swoop(float t, Eigen::Vector3f &pos, Eigen::Vector3f &pos_ref, float &yaw_r
         yaw_ref = 0.0;
 
         // height
-        if (pos(0) >= x_end && pos(0) <= x_start)
+        if (pos(0) >= x_end || pos(0) <= x_start)
         {
             pos_ref(2) = h_0;
         }
