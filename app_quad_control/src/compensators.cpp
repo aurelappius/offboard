@@ -1,4 +1,17 @@
 #include "compensators.h"
+
+// load parameters from yaml file
+YAML::Node yaml = YAML::LoadFile("app_quad_control/parameters/params.yaml");
+// read values from yaml file
+const float quad_rotor_radius = yaml["quad_rotor_radius"].as<float>();
+const float quad_rotor_distance = yaml["quad_rotor_distance"].as<float>();
+const float sanchez_constant = yaml["sanchez_constant"].as<float>();
+const float rho_air = yaml["rho_air"].as<float>();
+const float quadcopter_mass = yaml["quadcopter_mass"].as<float>();
+const float g = yaml["g"].as<float>();
+
+const float T_h = quadcopter_mass * g / 4; // hover thrust of one rotor[N]
+
 float CheesemanCompensator(float thrust_ref, float z)
 {
     return thrust_ref * (1.0 - std::pow((quad_rotor_radius / (4 * z)), 2));
@@ -32,16 +45,9 @@ float SanchezCompensator(float thrust_ref, float z)
 }
 
 // Appius Static Compensator
-float AppiusStaticCompensator(float thrust_ref, float z)
+float AppiusCompensator(float thrust_ref, float z)
 {
     return thrust_ref / (0.11413538 * std::exp(-5.38792044 * z) + 1.0275278);
-}
-
-// Appius Dynamic Compensator
-float AppiusDynamicCompensator(float thrust_ref, float z)
-{
-    // TODO
-    return 0;
 }
 
 float CheesemanDynamicCompensator(float thrust_ref, float z, float v)
@@ -49,7 +55,8 @@ float CheesemanDynamicCompensator(float thrust_ref, float z, float v)
     const float v_h = std::sqrt(T_h / (2 * rho_air * M_PI * quad_rotor_radius));
     return thrust_ref * (1.0 - (std::pow((quad_rotor_radius / (4 * z)), 2) / (1 + (std::pow((v / v_h), 2)))));
 }
-// Sanchez compensator with forward_speed
+
+// Kan compensator with forward_speed
 float KanDynamicCompensator(float thrust_ref, float z, float v)
 {
     const float v_h = std::sqrt(T_h / (2 * rho_air * M_PI * quad_rotor_radius));

@@ -43,7 +43,7 @@ int main(int argc, char **argv)
 {
 
   /* LOAD YAML PARAMETERS */
-  set_parameters("app_quad_control/parameters/params.yaml");
+  set_quad_control_parameters("app_quad_control/parameters/params.yaml");
 
   /* INITIALIZE LOGGING */
   std::ofstream myLog;
@@ -187,9 +187,9 @@ int main(int argc, char **argv)
     vel_ref(2) = params::P_pos_Z * pos_p_error(2); // different gain for Z-error
 
     // insert velocity trajectory generator here
-    velocityStepResponse(t, pos, pos_ref, yaw_ref, vel_ref,0.50);
-    //swoop(t, pos, pos_ref, yaw_ref, vel_ref, 1);
-    // check maximum velocities and constrain.
+    velocityStepResponse(t, pos, pos_ref, yaw_ref, vel_ref, 0.50);
+    // swoop(t, pos, pos_ref, yaw_ref, vel_ref, 1);
+    //  check maximum velocities and constrain.
     if (vel_ref(0) > params::max_vel_XY)
     {
       vel_ref(0) = params::max_vel_XY;
@@ -264,14 +264,13 @@ int main(int argc, char **argv)
 
     float thrust_ref = (acc_proj_z_b)*params::quadcopter_mass; // F=M*a
 
-    if (t > 15)
-    {
-     // thrust_ref = AppiusStaticCompensator(thrust_ref, pos(2)); // GE compensator
-    }
+    /* GROUND EFFECT COMPENSATION */
+    thrust_ref = AppiusCompensator(thrust_ref, pos(2)); // GE compensator
 
+    /* CONVERT THRUST TO THROTTLE */
     float throttle_ref = thrust_to_throttle(thrust_ref);
-    // std::cout<<throttle_ref<<std::endl;
-    /* COMMANDS TO PX4 */
+
+    /* SEND COMMANDS TO PX4 */
     // velocity commands (negative sign to account for xyz -> NED coordinate
     // change)
     //  vel_cmd.north_m_s = v_ref(0);
@@ -296,23 +295,7 @@ int main(int argc, char **argv)
     // std::cout << throttle_ref << std::endl;
     offboard.set_attitude(att_cmd);
 
-    /* LOGGING*/
-    // t, p_ref, p, rpy
-    // if (t > params::T_log) { // possibility to wait for transients to fade
-    // away
-    //   myLog << t << "," << pos_ref(0) << "," << pos_ref(1) << "," <<
-    //   pos_ref(2)
-    //         << "," << pos(0) << "," << pos(1) << "," << pos(2) << ","
-    //         << att_euler(0) << "," << att_euler(1) << "," << att_euler(2)
-    //         << "\n";
-    // }
-
-    // t, x, y, z, vx, vy, vz, roll, pitch, yaw, vroll, vpitch, vyaw, ctrls
-    // if (t > 20 && t <= 55)
-    // { //(t > params::T_log) { // possibility to wait for
-    // transients to fade away
-    // if (telemetry.actuator_control_target().controls.size() != 0)
-    // {
+    /* LOGGING */
     myLog << t << ","
           << telemetry.position_velocity_ned().position.north_m << ","
           << telemetry.position_velocity_ned().position.east_m << ","
@@ -338,8 +321,6 @@ int main(int argc, char **argv)
           << current[1] << ","
           << current[2] << ","
           << current[3] << "\n";
-    // }
-    // }
 
     /* SLEEP */
     sleep_for(milliseconds(params::T_s)); // 50Hz
@@ -352,28 +333,3 @@ int main(int argc, char **argv)
 
   return 0;
 }
-
-// CODE TO DEBUG TRAJECTORIES
-/*
-int main(int argc, char **argv)
-{
-  float t = 0;
-  int T_s = 20;
-  Eigen::Vector3f pos_ref(0, 0, 0);
-  Eigen::Vector3f vel_ref(0, 0, 0);
-  Eigen::Vector3f pos(0, 0, 0);
-  float yaw_ref = 0;
-  for (int i = 0;; i++)
-  {
-    t = float(i * T_s) / 100.0;
-    // stepResponse(t, pos, pos_ref, yaw_ref); //-> works
-    // circleStepResponse(t, pos, pos_ref, yaw_ref); //-> works
-    // staticDataCollection(t, pos, pos_ref, yaw_ref); //-> works
-    // verticalSpeedDataCollection(t, pos, pos_ref, yaw_ref); //->works
-    velocityDataCollection(t, pos, pos_ref, yaw_ref, vel_ref);
-    // std::cout
-    //     << "t: \t" << t << "\t x: \t" << pos_ref(0) << "\t y: \t" << pos_ref(1) << "\t z: \t" << pos_ref(2) << std::endl;
-    sleep_for(milliseconds(T_s)); // 50Hz
-  }
-}
-*/

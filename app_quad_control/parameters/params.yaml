@@ -24,3 +24,7 @@ T_log: 0 # logging start time [seconds]
 g: 9.81                     #gravitational acceleration [m_s2]
 quadcopter_mass: 1.5        # Quadcopter mass [kg]
 max_motor_thrust: 8.9764    # maximal thrust of one motor [N]
+quad_rotor_radius: 0.12     # Quadcopter rotor radius [m]
+quad_rotor_distance: 0.35   # Quadcopter rotor distance [m]
+sanchez_constant: 2.0       # constant defined in the sanchez publication
+rho_air: 1.205              # density of air [kg_m^3]

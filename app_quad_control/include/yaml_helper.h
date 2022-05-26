@@ -38,7 +38,7 @@ inline void yaml_file_check(std::string yaml_file)
 }
 
 // loads parameters
-inline void set_parameters(const std::string setpoint_path)
+inline void set_quad_control_parameters(const std::string setpoint_path)
 {
 
   // check if yaml file exists
