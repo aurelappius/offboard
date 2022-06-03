@@ -164,6 +164,7 @@ int main(int argc, char **argv)
     att_quat.x() = telemetry.attitude_quaternion().x;
     att_quat.y() = telemetry.attitude_quaternion().y;
     att_quat.z() = telemetry.attitude_quaternion().z;
+
     //  body frame (rotation matrix)
     body_frame = att_quat.toRotationMatrix();
 
@@ -173,9 +174,9 @@ int main(int argc, char **argv)
     //          vel(2)
     //           << std::endl;
 
-    /* TRAJECTORY GENERATION */
+    /* POSITION TRAJECTORY GENERATION */
     // insert postion trajectory generator here
-    // verticalSpeedController(t, pos, pos_ref, yaw_ref);
+    staticDataCollection(t, pos, pos_ref, yaw_ref);
 
     /* POSITION CONTROLLER */
     // proportional position error
@@ -186,9 +187,10 @@ int main(int argc, char **argv)
     vel_ref(1) = params::P_pos_XY * pos_p_error(1);
     vel_ref(2) = params::P_pos_Z * pos_p_error(2); // different gain for Z-error
 
+    /* VELOCITY TRAJECTORY GENERATION */
     // insert velocity trajectory generator here
-    velocityStepResponse(t, pos, pos_ref, yaw_ref, vel_ref, 0.50);
-    // swoop(t, pos, pos_ref, yaw_ref, vel_ref, 1);
+    // velocityStepResponse(t, pos, pos_ref, yaw_ref, vel_ref, 0.50);
+
     //  check maximum velocities and constrain.
     if (vel_ref(0) > params::max_vel_XY)
     {
